@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./style.css">
+    <title>Studio Charme</title>
+    <link rel="icon" type="image/png" href="./assets/SC.png" sizes="16x16 32x32 48x48 64x64 192x192">
+    <!-- Fonte Cinzel para títulos/logo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" 
+    rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <header id="top">
+    <nav>
+        <ul class="logo">
+            <li>
+                <a href="#top">
+                    <img src="./assets/SC.png" alt="Logo Studio Charme - SC" class="logo-img">
+                    <span class="logo-text">Studio Charme</span>
+                </a>
+            </li>
+        </ul>
+        <ul class="navigation">
+            <li><a href="#hero">Menu</a></li>
+            <li><a href="#about">Sobre</a></li>
+            <li><a href="#gallery">Galeria</a></li>
+            <li><a href="#contact">Contato</a></li>
+        </ul>
+    </nav>
+</header>
+<main>
+    <section class="hero" id="hero">
+        <div>
+            <h1>Realçando Sua Beleza</h1>
+            <h2>Sua beleza merece o melhor cuidado</h2>
+            <p>Bem-vindo(a) ao Studio Charme! Aqui, cada detalhe é pensado para realçar sua beleza, elevar sua autoestima e proporcionar momentos únicos de cuidado e relaxamento.</p>
+            <button>Agendar Agora</button>
+        </div>
+        <img src="./assets/studiocharme-Photoroom.png" alt="logo do salão">
+    </section>
+    <section class="about" id="about">
+        <img src="./assets/SC.png" alt="Logo Studio Charme - SC">
+        
+        <div>
+            <h2>Sobre Nós</h2>
+            <span></span>
+            <p>No <strong class="destaque">Studio Charme</strong>, acreditamos que a beleza vai além da aparência: ela é autoestima, confiança e bem-estar. Nosso espaço foi criado para ser um refúgio onde você pode relaxar, cuidar de si mesma e sair se sentindo ainda mais incrível.</p>
+
+            <p>Temos orgulho da nossa equipe, formada por profissionais apaixonadas pelo que fazem e que colocam amor em cada detalhe:</p>
+     <ul>
+            <li><strong class="destaque">Lívia</strong> <p>Designer de unhas especialista em alongamentos, esmaltação em gel e nail art. Criativa e detalhista, ela transforma suas unhas em verdadeiras joias que refletem sua personalidade.</p></li>
+            <li><strong class="destaque">Cibele</strong><p>cabeleireira dedicada, especialista em cortes modernos, coloração, hidratações e finalizações que realçam a beleza única de cada cliente. Com ela, cada cabelo ganha vida e movimento.</p></li>
+            <li><strong class="destaque">Clarisse</strong> <p>em cílios, sobrancelhas e depilação, conhecida por seu cuidado minucioso e técnicas que valorizam o olhar e realçam sua expressão natural. Cada detalhe recebe sua atenção especial para resultados perfeitos.</p></li> 
+    </ul>
+
+            <p>No <strong class="destaque">Studio Charme</strong>, cada cliente é recebido com carinho e atenção, porque acreditamos que você merece uma experiência completa — do atendimento ao resultado final.</p>
+
+            <p>Venha conhecer nosso espaço e descubra como é se sentir cuidada nos mínimos detalhes!</p>
+        </div>
+    </section>
+
+    <section class="gallery" id="gallery">
+  <h2>Galeria</h2>
+
+  <!-- Grid de fotos -->
+  <div class="gallery-grid">
+    <a href="#img1" class="gallery-item">
+      <img src="./assets/gallery1.jpg" alt="Unhas decoradas por Lívia">
+    </a>
+    <a href="#img2" class="gallery-item">
+      <img src="./assets/gallery2.jpg" alt="Corte de cabelo por Cibele">
+    </a>
+    <a href="#img3" class="gallery-item">
+      <img src="./assets/gallery3.jpg" alt="Sobrancelhas por Clarisse">
+    </a>
+    <a href="#img4" class="gallery-item">
+      <img src="./assets/gallery4.jpg" alt="Alongamento de unhas por Lívia">
+    </a>
+    <a href="#img5" class="gallery-item">
+      <img src="./assets/gallery5.jpg" alt="Coloração por Cibele">
+    </a>
+    <a href="#img6" class="gallery-item">
+      <img src="./assets/gallery6.jpg" alt="Extensão de cílios por Clarisse">
+    </a>
+  </div>
+
+  <!-- Estilo Instagram embutido -->
+  <div class="instagram-gallery">
+    <h3>Siga nosso Instagram</h3>
+    <p>@_studiocharme</p>
+    <div class="insta-feed">
+      <a href="https://www.instagram.com/p/CZxxxxxx" target="_blank">
+        <img src="./assets/insta1.jpg" alt="Post no Instagram">
+      </a>
+      <a href="https://www.instagram.com/p/CYxxxxxx" target="_blank">
+        <img src="./assets/insta2.jpg" alt="Post no Instagram">
+      </a>
+      <a href="https://www.instagram.com/p/CXxxxxxx" target="_blank">
+        <img src="./assets/insta3.jpg" alt="Post no Instagram">
+      </a>
+      <a href="https://www.instagram.com/p/CWxxxxxx" target="_blank">
+        <img src="./assets/insta4.jpg" alt="Post no Instagram">
+      </a>
+    </div>
+  </div>
+
+  <!-- Lightbox com navegação -->
+<div id="img1" class="lightbox">
+  <a href="#gallery" class="close">&times;</a>
+  <a href="#img6" class="prev">&#10094;</a>
+  <img src="./assets/gallery1.jpg" alt="">
+  <a href="#img2" class="next">&#10095;</a>
+</div>
+
+<div id="img2" class="lightbox">
+  <a href="#gallery" class="close">&times;</a>
+  <a href="#img1" class="prev">&#10094;</a>
+  <img src="./assets/gallery2.jpg" alt="">
+  <a href="#img3" class="next">&#10095;</a>
+</div>
+
+<div id="img3" class="lightbox">
+  <a href="#gallery" class="close">&times;</a>
+  <a href="#img2" class="prev">&#10094;</a>
+  <img src="./assets/gallery3.jpg" alt="">
+  <a href="#img4" class="next">&#10095;</a>
+</div>
+
+<div id="img4" class="lightbox">
+  <a href="#gallery" class="close">&times;</a>
+  <a href="#img3" class="prev">&#10094;</a>
+  <img src="./assets/gallery4.jpg" alt="">
+  <a href="#img5" class="next">&#10095;</a>
+</div>
+
+<div id="img5" class="lightbox">
+  <a href="#gallery" class="close">&times;</a>
+  <a href="#img4" class="prev">&#10094;</a>
+  <img src="./assets/gallery5.jpg" alt="">
+  <a href="#img6" class="next">&#10095;</a>
+</div>
+
+<div id="img6" class="lightbox">
+  <a href="#gallery" class="close">&times;</a>
+  <a href="#img5" class="prev">&#10094;</a>
+  <img src="./assets/gallery6.jpg" alt="">
+  <a href="#img1" class="next">&#10095;</a>
+</div>
+
+
+  
+</section>
+
+
+
+    <section class="contact" id="contact">
+  <h2>Contato</h2>
+
+  <div class="contact-cards">
+
+    <div class="contact-card">
+      <h3>Clarisse</h3>
+      <div class="contact-actions">
+        <a class="btn-icon whatsapp"
+           href="https://wa.me/5585984560521"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="WhatsApp da Clarisse">
+          <i class="fa-brands fa-whatsapp"></i>
+        </a>
+        <a class="btn-icon instagram"
+           href="https://www.instagram.com/beauty.clarissemendes"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="Instagram da Clarisse">
+          <i class="fa-brands fa-instagram"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="contact-card">
+      <h3>Cibele</h3>
+      <div class="contact-actions">
+        <a class="btn-icon whatsapp"
+           href="https://wa.me/5585987963037"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="WhatsApp da Cibele">
+          <i class="fa-brands fa-whatsapp"></i>
+        </a>
+        <a class="btn-icon instagram"
+           href="https://www.instagram.com/_studiocharme"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="Instagram da Cibele">
+          <i class="fa-brands fa-instagram"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="contact-card">
+      <h3>Lívia</h3>
+      <div class="contact-actions">
+        <a class="btn-icon whatsapp"
+           href="https://wa.me/5585992029844"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="WhatsApp da Lívia">
+          <i class="fa-brands fa-whatsapp"></i>
+        </a>
+        <a class="btn-icon instagram"
+           href="https://www.instagram.com/livianailsdesigner_1"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="Instagram da Lívia">
+          <i class="fa-brands fa-instagram"></i>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+</main>
+    
+</body>
+
+<footer class="footer">
+  <p>&copy; 2025 Studio Charme. Todos os direitos reservados.</p>
+
+  <nav class="footer-links">
+    <a href="politica_privacidade_final.html">Política de Privacidade</a> |
+    <a href="termos_uso_final.html">Termos de Uso</a>
+  </nav>
+
+  <div class="footer-social">
+    <a href="https://www.instagram.com/_studiocharme" target="_blank" aria-label="Instagram do Studio Charme">
+      <i class="fa-brands fa-instagram"></i>
+    </a>
+    <a href="https://wa.me/5585987963037" target="_blank" aria-label="WhatsApp do Studio Charme">
+      <i class="fa-brands fa-whatsapp"></i>
+    </a>
+  </div>
+
+
+</html>
