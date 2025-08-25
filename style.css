@@ -782,7 +782,7 @@ header nav {
 #backToTop {
   position: fixed;
   bottom: 20px;
-  right: 20px;
+  right: clamp(15px, 5vw, 40px); /* ajusta automaticamente entre celular e desktop */
   background: #A49156;
   color: #352C2D;
   border: none;
@@ -815,13 +815,13 @@ header nav {
   box-shadow: 0 6px 16px rgba(0,0,0,0.3);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   #backToTop {
     width: 42px;
     height: 42px;
     font-size: 18px;
     bottom: 15px;
-    right: 15px;
+    right: 15px; /* aproxima mais da borda no celular */
   }
 }
 
