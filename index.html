@@ -501,14 +501,33 @@
 })();
 </script>
 
+
+<!-- Botão voltar ao topo -->
+<button id="backToTop" aria-label="Voltar ao topo">↑</button>
+
+<script>
+// Mostrar botão "Voltar ao Topo"
+const backToTop = document.getElementById('backToTop');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 300) {
+    backToTop.classList.add('show');
+  } else {
+    backToTop.classList.remove('show');
+  }
+});
+backToTop.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+
 </body>
 
 <footer class="footer">
   <p>&copy; 2025 Studio Charme. Todos os direitos reservados.</p>
 
   <nav class="footer-links">
-    <a href="politica_privacidade_final.html">Política de Privacidade</a> |
-    <a href="termos_uso_final.html">Termos de Uso</a>
+    <a href="politica_privacidade_.html">Política de Privacidade</a> |
+    <a href="termos_de_uso.html">Termos de Uso</a>
   </nav>
 
   <div class="footer-social">

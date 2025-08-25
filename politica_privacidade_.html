@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Política de Privacidade - Studio Charme</title>
-    <link rel="stylesheet" href="./style_atualizado.css">
+    <link rel="stylesheet" href="./fixed_style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -45,5 +45,24 @@
         <a href="https://wa.me/5585987963037" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
       </div>
     </footer>
+
+<!-- Botão voltar ao topo -->
+<button id="backToTop" aria-label="Voltar ao topo">↑</button>
+
+<script>
+// Mostrar botão "Voltar ao Topo"
+const backToTop = document.getElementById('backToTop');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 300) {
+    backToTop.classList.add('show');
+  } else {
+    backToTop.classList.remove('show');
+  }
+});
+backToTop.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+
 </body>
 </html>

@@ -771,3 +771,50 @@ main .hero div button:hover {
   color: #352C2D;
   background: #fff;
 }
+
+/* ===== Ajuste Menu Responsivo ===== */
+header nav {
+  justify-content: space-between; /* em vez de gap fixo */
+  gap: 0; 
+}
+
+/* ===== Botão Voltar ao Topo ===== */
+#backToTop {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #A49156;
+  color: #352C2D;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 1100;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#backToTop.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ===== Modal responsivo ===== */
+.booking-modal {
+  padding: 10px;
+}
+
+.booking-content {
+  width: 100%;
+  max-width: 95%;
+  max-height: 95vh;
+  overflow-y: auto;
+}
