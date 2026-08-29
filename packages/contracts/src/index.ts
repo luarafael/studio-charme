@@ -1,5 +1,6 @@
 export * from './agenda.js';
 export * from './auth.js';
+export * from './brand.js';
 export * from './availability.js';
 export * from './datetime.js';
 export * from './enums.js';

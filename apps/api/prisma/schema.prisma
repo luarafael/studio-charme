@@ -93,6 +93,10 @@ model Professional {
   role      String  @db.VarChar(40)
   bio       String? @db.Text
   photoUrl  String? @db.VarChar(500)
+  /// Foto da própria profissional, isolada da conta. Não altera a logo do site.
+  photoBytes     Bytes?
+  photoMime      String?   @db.VarChar(40)
+  photoUpdatedAt DateTime?
   phone     String? @db.VarChar(20)
   instagram String? @db.VarChar(80)
   /// WhatsApp em formato E.164, sem símbolos: 5585999999999.

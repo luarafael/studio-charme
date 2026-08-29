@@ -7,7 +7,7 @@ import {
 } from '@studio-charme/contracts';
 import { api, ApiClientError, ensureCsrfToken, setCsrfToken } from '@/lib/api';
 
-const sessionKey = ['auth', 'me'] as const;
+export const AUTH_SESSION_KEY = ['auth', 'me'] as const;
 
 async function fetchSession(): Promise<AuthenticatedProfessional | null> {
   try {
@@ -34,7 +34,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const sessionQuery = useQuery({
-    queryKey: sessionKey,
+    queryKey: AUTH_SESSION_KEY,
     queryFn: fetchSession,
     retry: false,
     staleTime: 60_000,
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return data.professional;
     },
     onSuccess: (professional) => {
-      queryClient.setQueryData(sessionKey, professional);
+      queryClient.setQueryData(AUTH_SESSION_KEY, professional);
     },
   });
 
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCsrfToken(null);
     },
     onSuccess: () => {
-      queryClient.setQueryData(sessionKey, null);
+      queryClient.setQueryData(AUTH_SESSION_KEY, null);
       void queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' });
     },
   });

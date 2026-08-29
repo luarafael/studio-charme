@@ -39,6 +39,9 @@ export const AUDIT_ACTIONS = {
   EXPENSE_UPDATED: 'expense.updated',
   EXPENSE_DELETED: 'expense.deleted',
 
+  PROFILE_PHOTO_UPDATED: 'professional.photo.updated',
+  PROFILE_PHOTO_REMOVED: 'professional.photo.removed',
+
   /** Tentativa de acessar dado de outra profissional. */
   ACCESS_DENIED: 'security.access_denied',
 } as const;

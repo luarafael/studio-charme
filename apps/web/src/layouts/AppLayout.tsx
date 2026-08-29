@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { CalendarDays, Clock, History, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react';
-import { brandAssets, siteConfig } from '@/config/site';
+import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { ProfessionalPhoto } from '@/features/profile/ProfessionalPhoto';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { cn } from '@/lib/cn';
 
@@ -26,7 +27,7 @@ export function AppLayout() {
       </a>
       <aside className="bg-brown-900 text-cream hidden flex-col lg:flex">
         <div className="flex items-center gap-3 px-5 py-6">
-          <img src={brandAssets.logoMark} alt="" width={40} height={40} className="size-10" />
+          {professional && <ProfessionalPhoto professional={professional} className="size-10" />}
           <div>
             <p className="font-display text-gold-500 text-lg leading-none">{siteConfig.name}</p>
             <p className="text-cream/70 mt-1 text-xs">Área da profissional</p>
@@ -53,9 +54,16 @@ export function AppLayout() {
 
       <div className="flex min-w-0 flex-col">
         <header className="border-brown-100 flex items-center justify-between gap-4 border-b bg-white px-4 py-3 lg:px-8">
-          <div className="min-w-0">
-            <p className="text-brown-500 text-xs tracking-wide uppercase">Conta ativa</p>
-            <p className="text-brown-900 truncate font-semibold">{professional?.name}</p>
+          <div className="flex min-w-0 items-center gap-3">
+            {professional && (
+              <div className="lg:hidden">
+                <ProfessionalPhoto professional={professional} className="size-10" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-brown-500 text-xs tracking-wide uppercase">Conta ativa</p>
+              <p className="text-brown-900 truncate font-semibold">{professional?.name}</p>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <NotificationBell />

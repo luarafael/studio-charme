@@ -20,6 +20,7 @@ import { generateToken, hashToken } from '../../lib/tokens.js';
 import { buildInviteEmail, buildPasswordResetEmail, createMailer } from '../../lib/mailer.js';
 import { getScopedProfessionalId } from '../../lib/scope.js';
 import type { AppInstance } from '../../types/app.js';
+import { professionalSessionSelect, toAuthenticatedProfessional } from './professional.js';
 
 /** Prazo do link de redefinição: curto, porque chega por e-mail. */
 const PASSWORD_RESET_TTL_MINUTES = 30;
@@ -84,12 +85,7 @@ export async function authRoutes(app: AppInstance): Promise<void> {
       const professional = await app.prisma.professional.findUnique({
         where: { email },
         select: {
-          id: true,
-          slug: true,
-          name: true,
-          email: true,
-          role: true,
-          photoUrl: true,
+          ...professionalSessionSelect,
           passwordHash: true,
           isActive: true,
         },
@@ -153,7 +149,7 @@ export async function authRoutes(app: AppInstance): Promise<void> {
       });
 
       const { passwordHash: _hash, isActive: _active, ...safe } = professional;
-      return { professional: safe, csrfToken };
+      return { professional: toAuthenticatedProfessional(safe), csrfToken };
     },
   );
 

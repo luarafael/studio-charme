@@ -3,6 +3,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AuthenticatedProfessional } from '@studio-charme/contracts';
 import type { Env } from '../../config/env.js';
 import { generateToken, hashToken } from '../../lib/tokens.js';
+import { professionalSessionSelect, toAuthenticatedProfessional } from './professional.js';
 
 /**
  * Sessão em cookie, e não JWT.
@@ -88,12 +89,7 @@ export class SessionService {
         lastSeenAt: true,
         professional: {
           select: {
-            id: true,
-            slug: true,
-            name: true,
-            email: true,
-            role: true,
-            photoUrl: true,
+            ...professionalSessionSelect,
             isActive: true,
           },
         },
@@ -109,7 +105,7 @@ export class SessionService {
     await this.touch(session.id, session.lastSeenAt);
 
     const { isActive: _isActive, ...professional } = session.professional;
-    return { professional, sessionId: session.id };
+    return { professional: toAuthenticatedProfessional(professional), sessionId: session.id };
   }
 
   /** Atualiza o último acesso, sem escrever a cada requisição. */
