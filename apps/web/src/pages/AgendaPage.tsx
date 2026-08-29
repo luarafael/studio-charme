@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router';
 import {
   addIsoDateDays,
   APPOINTMENT_STATUS_LABELS,
+  isoDateSchema,
   toZonedIsoDate,
   type AppointmentDto,
   type AppointmentStatus,
   type IsoDate,
 } from '@studio-charme/contracts';
-import { CalendarPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -24,8 +26,13 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { useToast } from '@/hooks/useToast';
 import { api, ApiClientError } from '@/lib/api';
 import { AppointmentComposer } from '@/features/agenda/AppointmentComposer';
+import {
+  buildAppointmentConfirmationMessage,
+  openClientWhatsApp,
+} from '@/features/agenda/clientWhatsApp';
 import { PaymentComposer } from '@/features/finance/PaymentComposer';
-import { formatIsoDateLong, formatTime } from '@/features/agenda/format';
+import { useAuth } from '@/features/auth/AuthProvider';
+import { formatAppointmentWhen, formatIsoDateLong, formatTime } from '@/features/agenda/format';
 import {
   APPOINTMENT_STATUS_ACTION_LABEL,
   APPOINTMENT_STATUS_TONE,
@@ -40,12 +47,20 @@ export default function AgendaPage() {
 
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { professional } = useAuth();
+  const [searchParams] = useSearchParams();
   const today = toZonedIsoDate(new Date());
-  const [date, setDate] = useState<IsoDate>(today);
+  const dateFromQuery = isoDateSchema.safeParse(searchParams.get('date'));
+  const [date, setDate] = useState<IsoDate>(dateFromQuery.success ? dateFromQuery.data : today);
   const [composerOpen, setComposerOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AppointmentDto | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [payTarget, setPayTarget] = useState<AppointmentDto | null>(null);
+
+  useEffect(() => {
+    const parsed = isoDateSchema.safeParse(searchParams.get('date'));
+    if (parsed.success) setDate(parsed.data);
+  }, [searchParams]);
 
   const list = useQuery({
     queryKey: ['appointments', date],
@@ -67,6 +82,16 @@ export default function AgendaPage() {
     },
   });
 
+  function notifyClientOnWhatsApp(appointment: AppointmentDto): void {
+    const message = buildAppointmentConfirmationMessage({
+      clientName: appointment.client.name,
+      professionalName: professional?.name ?? siteConfig.name,
+      serviceNames: appointment.services.map((service) => service.name).join(', '),
+      when: formatAppointmentWhen(appointment.startsAt),
+    });
+    openClientWhatsApp(appointment.client.phone, message);
+  }
+
   async function applyStatus(appointment: AppointmentDto, status: AppointmentStatus): Promise<void> {
     if (status === 'CANCELLED') {
       setCancelTarget(appointment);
@@ -75,7 +100,20 @@ export default function AgendaPage() {
     }
     try {
       const updated = await statusMutation.mutateAsync({ id: appointment.id, status });
-      showToast({ tone: 'success', title: 'Agenda atualizada', description: APPOINTMENT_STATUS_LABELS[status] });
+      if (status === 'CONFIRMED') {
+        notifyClientOnWhatsApp(updated);
+        showToast({
+          tone: 'success',
+          title: 'Horário confirmado',
+          description: `Toque em enviar no WhatsApp para avisar ${updated.client.name}.`,
+        });
+      } else {
+        showToast({
+          tone: 'success',
+          title: 'Agenda atualizada',
+          description: APPOINTMENT_STATUS_LABELS[status],
+        });
+      }
       if (status === 'COMPLETED') setPayTarget(updated);
     } catch (error) {
       showToast({
@@ -187,6 +225,16 @@ export default function AgendaPage() {
                               {APPOINTMENT_STATUS_ACTION_LABEL[status] ?? status}
                             </Button>
                           ))}
+                          {item.status === 'CONFIRMED' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              leadingIcon={<MessageCircle className="size-4" aria-hidden="true" />}
+                              onClick={() => notifyClientOnWhatsApp(item)}
+                            >
+                              Avisar no WhatsApp
+                            </Button>
+                          )}
                           {item.status === 'COMPLETED' && (
                             <Button size="sm" variant="secondary" onClick={() => setPayTarget(item)}>
                               Receber

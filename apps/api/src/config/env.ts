@@ -82,6 +82,14 @@ const envSchema = z
     STORAGE_ACCESS_KEY_ID: z.string().optional(),
     STORAGE_SECRET_ACCESS_KEY: z.string().optional(),
     STORAGE_PUBLIC_BASE_URL: z.string().optional(),
+
+    /**
+     * Chaves VAPID para notificação no celular. Sem as duas, o sino interno
+     * continua funcionando e o push fica desligado.
+     */
+    VAPID_PUBLIC_KEY: z.string().min(20).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(20).optional(),
+    VAPID_SUBJECT: z.string().default('mailto:nao-responda@studiocharme.local'),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production') {
@@ -141,6 +149,16 @@ const envSchema = z
           message: `${key} é obrigatório quando STORAGE_DRIVER=s3.`,
         });
       }
+    }
+
+    const vapidPublic = Boolean(env.VAPID_PUBLIC_KEY);
+    const vapidPrivate = Boolean(env.VAPID_PRIVATE_KEY);
+    if (vapidPublic !== vapidPrivate) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [vapidPublic ? 'VAPID_PRIVATE_KEY' : 'VAPID_PUBLIC_KEY'],
+        message: 'VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY precisam ser definidas juntas.',
+      });
     }
   });
 

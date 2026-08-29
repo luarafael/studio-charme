@@ -3,6 +3,7 @@ import { CalendarDays, Clock, LayoutDashboard, LogOut, Users, Wallet } from 'luc
 import { brandAssets, siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { cn } from '@/lib/cn';
 
 const nav = [
@@ -55,16 +56,19 @@ export function AppLayout() {
             <p className="text-brown-500 text-xs tracking-wide uppercase">Conta ativa</p>
             <p className="text-brown-900 truncate font-semibold">{professional?.name}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={<LogOut className="size-4" aria-hidden="true" />}
-            onClick={() => {
-              void logout().then(() => navigate('/entrar', { replace: true }));
-            }}
-          >
-            Sair
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <NotificationBell />
+            <Button
+              variant="ghost"
+              size="sm"
+              leadingIcon={<LogOut className="size-4" aria-hidden="true" />}
+              onClick={() => {
+                void logout().then(() => navigate('/entrar', { replace: true }));
+              }}
+            >
+              Sair
+            </Button>
+          </div>
         </header>
 
         <main id="conteudo-app" className="flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">

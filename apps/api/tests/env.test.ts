@@ -107,6 +107,18 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...baseEnv, STORAGE_DRIVER: 's3' })).toThrow(/STORAGE_BUCKET/);
   });
 
+  it('aceita o ambiente sem chaves VAPID, com o push desligado', () => {
+    const env = loadEnv({ ...baseEnv });
+    expect(env.VAPID_PUBLIC_KEY).toBeUndefined();
+    expect(env.VAPID_PRIVATE_KEY).toBeUndefined();
+  });
+
+  it('rejeita uma chave VAPID sem a outra', () => {
+    expect(() =>
+      loadEnv({ ...baseEnv, VAPID_PUBLIC_KEY: 'B'.repeat(65) }),
+    ).toThrow(/VAPID_PRIVATE_KEY/);
+  });
+
   it('ignora NODE_ENV vazio e aplica o padrão de desenvolvimento', () => {
     const env = loadEnv({ ...baseEnv, NODE_ENV: '' });
     expect(env.NODE_ENV).toBe('development');

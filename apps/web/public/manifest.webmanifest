@@ -1,0 +1,27 @@
+{
+  "name": "Studio Charme",
+  "short_name": "Studio Charme",
+  "description": "Agenda e avisos do Studio Charme para as profissionais.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#faf8f5",
+  "theme_color": "#352C2D",
+  "icons": [
+    {
+      "src": "/assets/SC.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/SC.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

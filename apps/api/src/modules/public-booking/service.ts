@@ -12,6 +12,7 @@ import { AppError, notFound, scheduleConflict } from '../../lib/errors.js';
 import { isAppointmentOverlapError } from '../../lib/prisma.js';
 import { AUDIT_ACTIONS, recordAudit } from '../../lib/audit.js';
 import { computeDaySlots } from '../availability/service.js';
+import { notifyBookingRequest } from '../notifications/service.js';
 
 async function findPublicProfessional(prisma: PrismaClient, slug: string) {
   const professional = await prisma.professional.findFirst({
@@ -187,6 +188,14 @@ export async function createPublicBooking(
       entityId: created.id,
       professionalId: professional.id,
       metadata: { source: 'WEBSITE' },
+    });
+
+    await notifyBookingRequest(prisma, request, {
+      professionalId: professional.id,
+      appointmentId: created.id,
+      clientName: body.clientName,
+      serviceName: service.name,
+      startsAt: window.startsAt,
     });
   } catch (error) {
     if (isAppointmentOverlapError(error)) {

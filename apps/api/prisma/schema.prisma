@@ -124,6 +124,8 @@ model Professional {
   payments              Payment[]
   expenses              Expense[]
   auditLogs             AuditLog[]
+  notifications         Notification[]
+  pushDevices           PushDevice[]
 
   @@index([isActive, isPubliclyVisible])
   @@map("professionals")
@@ -474,6 +476,54 @@ model Expense {
   @@index([professionalId, incurredOn])
   @@index([professionalId, status])
   @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Alertas internos e push no celular
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  /// Ex.: BOOKING_REQUEST. Lista fechada na API, string no banco para evoluir
+  /// sem migration a cada tipo novo.
+  type  String @db.VarChar(40)
+  title String @db.VarChar(160)
+  body  String @db.VarChar(500)
+  /// Caminho interno para abrir o alerta, ex.: /app/agenda?date=2026-08-29
+  href  String @db.VarChar(300)
+
+  appointmentId String? @db.Uuid
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([professionalId, createdAt])
+  @@index([professionalId, readAt])
+  @@map("notifications")
+}
+
+model PushDevice {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  /// URL do serviço de push do navegador. Única: o mesmo aparelho não se cadastra
+  /// duas vezes.
+  endpoint String @unique @db.Text
+  p256dh   String @db.VarChar(255)
+  auth     String @db.VarChar(255)
+  userAgent String? @db.VarChar(300)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([professionalId])
+  @@map("push_subscriptions")
 }
 
 // ---------------------------------------------------------------------------
