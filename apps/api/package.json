@@ -31,11 +31,13 @@
     "fastify": "^5.6.1",
     "fastify-plugin": "^5.1.0",
     "fastify-type-provider-zod": "^5.0.3",
+    "nodemailer": "^7.0.6",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@studio-charme/config": "workspace:*",
     "@types/node": "^24.8.1",
+    "@types/nodemailer": "^6.4.19",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.0",
     "pino-pretty": "^13.1.2",

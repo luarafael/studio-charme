@@ -68,8 +68,19 @@ export const errorHandlerPlugin = fp(async (app) => {
         ? (error as { statusCode?: unknown }).statusCode
         : undefined;
 
+    const errorCode =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? (error as { code?: unknown }).code
+        : undefined;
+
     if (statusCode === 429) {
       return reply.status(429).send(buildBody('RATE_LIMITED', request.id));
+    }
+
+    // Validação do schema Fastify/Zod chega como 400; a API padroniza em 422.
+    if (errorCode === 'FST_ERR_VALIDATION' || statusCode === 400) {
+      request.log.info({ err: error }, 'validação de entrada falhou');
+      return reply.status(422).send(buildBody('VALIDATION_ERROR', request.id));
     }
 
     if (typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500) {

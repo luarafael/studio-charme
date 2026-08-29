@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { AppError } from '../lib/errors.js';
-import { SessionService } from '../modules/auth/session-service.js';
+import { CSRF_COOKIE_NAME, SessionService } from '../modules/auth/session-service.js';
 
 /**
  * Autenticação por sessão.
@@ -26,7 +26,7 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     if (!resolved) {
       // Mensagem única para cookie ausente, expirado, revogado ou de conta
       // desativada: distinguir os casos ajudaria a sondar contas.
-      throw new AppError('UNAUTHORIZED', 'Sua sessão expirou. Entre novamente.', 401);
+      throw new AppError('UNAUTHENTICATED', 401);
     }
 
     request.professional = resolved.professional;
@@ -44,6 +44,14 @@ const authPlugin: FastifyPluginAsync = async (app) => {
     if (resolved) {
       request.professional = resolved.professional;
       request.sessionId = resolved.sessionId;
+    }
+  });
+
+  app.decorate('requireCsrf', async function requireCsrf(request: FastifyRequest) {
+    const cookie = request.cookies[CSRF_COOKIE_NAME];
+    const header = request.headers['x-csrf-token'];
+    if (!cookie || typeof header !== 'string' || header !== cookie) {
+      throw new AppError('CSRF_INVALID', 403);
     }
   });
 

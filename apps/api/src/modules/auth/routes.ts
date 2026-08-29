@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyRequest } from 'fastify';
 import {
   acceptInviteSchema,
   authenticatedProfessionalSchema,
@@ -10,10 +10,16 @@ import {
 import { z } from 'zod';
 import { AppError } from '../../lib/errors.js';
 import { AUDIT_ACTIONS, recordAudit } from '../../lib/audit.js';
-import { hashPassword, needsRehash, simulatePasswordVerification, verifyPassword } from '../../lib/password.js';
+import {
+  hashPassword,
+  needsRehash,
+  simulatePasswordVerification,
+  verifyPassword,
+} from '../../lib/password.js';
 import { generateToken, hashToken } from '../../lib/tokens.js';
 import { buildInviteEmail, buildPasswordResetEmail, createMailer } from '../../lib/mailer.js';
 import { getScopedProfessionalId } from '../../lib/scope.js';
+import type { AppInstance } from '../../types/app.js';
 
 /** Prazo do link de redefinição: curto, porque chega por e-mail. */
 const PASSWORD_RESET_TTL_MINUTES = 30;
@@ -31,7 +37,7 @@ const INVITE_TTL_HOURS = 72;
 const GENERIC_RESET_MESSAGE =
   'Se este e-mail estiver cadastrado, enviamos as instruções para redefinir a senha.';
 
-export async function authRoutes(app: FastifyInstance): Promise<void> {
+export async function authRoutes(app: AppInstance): Promise<void> {
   const mailer = createMailer(app.env, app.log);
 
   /**
@@ -64,7 +70,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       config: { rateLimit: authRateLimit },
       schema: {
         body: loginSchema,
-        response: { 200: z.object({ professional: authenticatedProfessionalSchema }) },
+        response: {
+          200: z.object({
+            professional: authenticatedProfessionalSchema,
+            csrfToken: z.string(),
+          }),
+        },
       },
     },
     async (request, reply) => {
@@ -98,7 +109,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           professionalId: professional?.id ?? null,
           metadata: { email, reason: !professional ? 'inexistente' : 'sem_senha_ou_inativa' },
         });
-        throw new AppError('INVALID_CREDENTIALS', 'E-mail ou senha incorretos.', 401);
+        throw new AppError('INVALID_CREDENTIALS', 401);
       }
 
       const passwordMatches = await verifyPassword(professional.passwordHash, password);
@@ -111,7 +122,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           professionalId: professional.id,
           metadata: { email, reason: 'senha_incorreta' },
         });
-        throw new AppError('INVALID_CREDENTIALS', 'E-mail ou senha incorretos.', 401);
+        throw new AppError('INVALID_CREDENTIALS', 401);
       }
 
       // Aproveita o momento em que a senha em texto está disponível para
@@ -123,7 +134,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      await app.sessions.create(reply, professional.id, {
+      const csrfToken = await app.sessions.create(reply, professional.id, {
         ipAddress: request.ip,
         userAgent: request.headers['user-agent'],
         rememberMe,
@@ -142,7 +153,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       });
 
       const { passwordHash: _hash, isActive: _active, ...safe } = professional;
-      return { professional: safe };
+      return { professional: safe, csrfToken };
     },
   );
 
@@ -166,7 +177,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
 
       await app.sessions.destroy(request, reply);
-      return reply.status(204).send();
+      return reply.status(204).send(null);
     },
   );
 
@@ -180,6 +191,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       schema: { response: { 200: z.object({ professional: authenticatedProfessionalSchema }) } },
     },
     async (request) => ({ professional: request.professional! }),
+  );
+
+  app.get(
+    '/auth/csrf',
+    { schema: { response: { 200: z.object({ csrfToken: z.string() }) } } },
+    async (_request, reply) => ({ csrfToken: app.sessions.issueCsrfToken(reply) }),
   );
 
   // -------------------------------------------------------------------------
@@ -249,7 +266,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   // Definir senha por token (redefinição e primeiro acesso)
   // -------------------------------------------------------------------------
   const consumeTokenAndSetPassword = async (
-    request: Parameters<Parameters<typeof app.post>[2]>[0],
+    request: FastifyRequest,
     purpose: 'PASSWORD_RESET' | 'INVITE',
     token: string,
     password: string,
@@ -275,11 +292,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!isUsable) {
       // Uma única mensagem para token inexistente, de outro tipo, já usado ou
       // expirado: detalhar ajudaria a sondar tokens válidos.
-      throw new AppError(
-        'INVALID_TOKEN',
-        'Este link é inválido ou expirou. Solicite um novo.',
-        400,
-      );
+      throw new AppError('INVALID_TOKEN', 400, {
+        message: 'Este link é inválido ou expirou. Solicite um novo.',
+      });
     }
 
     const passwordHash = await hashPassword(password);
@@ -296,7 +311,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       });
 
       if (consumed.count === 0) {
-        throw new AppError('INVALID_TOKEN', 'Este link já foi utilizado.', 400);
+        throw new AppError('INVALID_TOKEN', 400, { message: 'Este link já foi utilizado.' });
       }
 
       await tx.professional.update({
@@ -367,7 +382,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/auth/change-password',
     {
-      preHandler: app.requireAuth,
+      preHandler: [app.requireAuth, app.requireCsrf],
       config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
       schema: {
         body: changePasswordSchema,
@@ -389,7 +404,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         !professional?.passwordHash ||
         !(await verifyPassword(professional.passwordHash, currentPassword))
       ) {
-        throw new AppError('INVALID_CREDENTIALS', 'A senha atual está incorreta.', 401);
+        throw new AppError('INVALID_CREDENTIALS', 401, {
+          message: 'A senha atual está incorreta.',
+        });
       }
 
       await app.prisma.professional.update({
@@ -423,7 +440,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/auth/invite',
     {
-      preHandler: app.requireAuth,
+      preHandler: [app.requireAuth, app.requireCsrf],
       config: { rateLimit: { max: 10, timeWindow: '1 hour' } },
       schema: {
         body: z.object({ professionalId: z.uuid() }),
@@ -447,7 +464,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           entityId: request.body.professionalId,
           metadata: { attemptedAction: 'invite' },
         });
-        throw new AppError('NOT_FOUND', 'Profissional não encontrada.', 404);
+        throw new AppError('NOT_FOUND', 404, { message: 'Profissional não encontrada.' });
       }
 
       const professional = await app.prisma.professional.findUnique({
@@ -456,7 +473,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       });
 
       if (!professional) {
-        throw new AppError('NOT_FOUND', 'Profissional não encontrada.', 404);
+        throw new AppError('NOT_FOUND', 404, { message: 'Profissional não encontrada.' });
       }
 
       const token = generateToken();

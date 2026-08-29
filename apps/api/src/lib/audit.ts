@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import type { FastifyRequest } from 'fastify';
 
 /**
@@ -118,7 +118,7 @@ export async function recordAudit(
         entityId: entry.entityId ?? null,
         professionalId: entry.professionalId ?? request.professional?.id ?? null,
         metadata: entry.metadata
-          ? (sanitizeMetadata(entry.metadata) as Record<string, unknown>)
+          ? (JSON.parse(JSON.stringify(sanitizeMetadata(entry.metadata))) as Prisma.InputJsonValue)
           : undefined,
         ipAddress: request.ip,
         // O user agent completo pode ser enorme; o essencial cabe em 300.

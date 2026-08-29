@@ -13,7 +13,7 @@ import { generateToken, hashToken } from '../../lib/tokens.js';
  * profissional acessa dados de clientes.
  */
 
-/** Cookie renovado quando falta menos que isto para expirar. */
+export const CSRF_COOKIE_NAME = 'sc_csrf';
 const RENEW_THRESHOLD_RATIO = 0.5;
 
 /** Evita uma escrita no banco a cada requisição só para atualizar o último acesso. */
@@ -46,7 +46,7 @@ export class SessionService {
     reply: FastifyReply,
     professionalId: string,
     context: SessionCreationContext,
-  ): Promise<void> {
+  ): Promise<string> {
     const token = generateToken();
     const expiresAt = new Date(Date.now() + this.ttlMs);
 
@@ -61,6 +61,9 @@ export class SessionService {
     });
 
     this.setCookie(reply, token, context.rememberMe ? expiresAt : null);
+    const csrfToken = generateToken();
+    this.setCsrfCookie(reply, context.rememberMe ? expiresAt : null, csrfToken);
+    return csrfToken;
   }
 
   /**
@@ -160,6 +163,13 @@ export class SessionService {
     }
 
     this.clearCookie(reply);
+    this.clearCsrfCookie(reply);
+  }
+
+  issueCsrfToken(reply: FastifyReply): string {
+    const token = generateToken();
+    this.setCsrfCookie(reply, null, token);
+    return token;
   }
 
   /**
@@ -210,6 +220,29 @@ export class SessionService {
       path: '/',
       ...(this.env.COOKIE_DOMAIN ? { domain: this.env.COOKIE_DOMAIN } : {}),
     };
+  }
+
+  private setCsrfCookie(reply: FastifyReply, expiresAt: Date | null, token = generateToken()): void {
+    reply.setCookie(CSRF_COOKIE_NAME, token, {
+      // Precisa ser lido pelo frontend para ir no cabeçalho. O cookie de sessão
+      // continua HttpOnly; este só vale combinado com ele.
+      httpOnly: false,
+      secure: this.env.COOKIE_SECURE,
+      sameSite: 'lax',
+      path: '/',
+      ...(this.env.COOKIE_DOMAIN ? { domain: this.env.COOKIE_DOMAIN } : {}),
+      ...(expiresAt ? { expires: expiresAt } : {}),
+    });
+  }
+
+  private clearCsrfCookie(reply: FastifyReply): void {
+    reply.clearCookie(CSRF_COOKIE_NAME, {
+      httpOnly: false,
+      secure: this.env.COOKIE_SECURE,
+      sameSite: 'lax',
+      path: '/',
+      ...(this.env.COOKIE_DOMAIN ? { domain: this.env.COOKIE_DOMAIN } : {}),
+    });
   }
 
   private setCookie(reply: FastifyReply, token: string, expiresAt: Date | null): void {

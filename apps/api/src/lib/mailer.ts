@@ -31,15 +31,13 @@ function createConsoleMailer(logger: FastifyBaseLogger): Mailer {
 }
 
 /**
- * Envio por SMTP.
- *
- * O `nodemailer` é carregado sob demanda para não entrar no bundle nem exigir
- * instalação quando o provedor configurado é o console.
+ * Envio por SMTP via nodemailer, carregado só quando MAIL_PROVIDER=smtp.
  */
 function createSmtpMailer(env: Env, logger: FastifyBaseLogger): Mailer {
   return {
     async send(message) {
-      const { createTransport } = await import('nodemailer');
+      const nodemailer = await import('nodemailer');
+      const createTransport = nodemailer.createTransport ?? nodemailer.default.createTransport;
 
       const transport = createTransport({
         host: env.SMTP_HOST,

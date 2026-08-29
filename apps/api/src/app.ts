@@ -4,13 +4,23 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { randomUUID } from 'node:crypto';
+import {
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 import type { Env } from './config/env.js';
 import { errorHandlerPlugin } from './plugins/error-handler.js';
+import envPlugin from './plugins/env.js';
+import prismaPlugin from './plugins/prisma.js';
+import authPlugin from './plugins/auth.js';
 import { healthRoutes } from './routes/health.js';
+import { authRoutes } from './modules/auth/routes.js';
+import type { AppInstance } from './types/app.js';
 
 export const API_PREFIX = '/api/v1';
 
-export async function buildApp(env: Env): Promise<FastifyInstance> {
+export async function buildApp(env: Env): Promise<AppInstance> {
   const app = Fastify({
     // Testes não precisam de log e ele só poluiria a saída do Vitest.
     logger:
@@ -48,9 +58,12 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
     genReqId: () => randomUUID(),
     trustProxy: true,
     bodyLimit: 1_048_576,
-  });
+  }).withTypeProvider<ZodTypeProvider>();
 
-  app.decorate('env', env);
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
+  await app.register(envPlugin, { env });
 
   await app.register(helmet, {
     // A API só devolve JSON; a política de conteúdo do site é definida na Vercel.
@@ -87,7 +100,13 @@ export async function buildApp(env: Env): Promise<FastifyInstance> {
   });
 
   await app.register(errorHandlerPlugin);
+  await app.register(prismaPlugin);
+  await app.register(authPlugin);
   await app.register(healthRoutes);
+  await app.register(authRoutes, { prefix: API_PREFIX });
 
   return app;
 }
+
+/** Tipo auxiliar para testes que ainda recebem FastifyInstance genérico. */
+export type BuiltApp = FastifyInstance;

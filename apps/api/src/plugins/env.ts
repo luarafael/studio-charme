@@ -8,8 +8,8 @@ import type { Env } from '../config/env.js';
  * Registrar como plugin permite que os demais declarem `dependencies: ['env']`,
  * garantindo a ordem de inicialização em vez de depender da ordem de escrita.
  */
-const envPlugin: FastifyPluginAsync = async (app, options) => {
-  app.decorate('env', (options as { env: Env }).env);
+const envPlugin: FastifyPluginAsync<{ env: Env }> = async (app, options) => {
+  app.decorate('env', options.env);
 };
 
 export default fp(envPlugin, { name: 'env' });

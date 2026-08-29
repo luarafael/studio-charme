@@ -98,3 +98,33 @@ describe('CORS', () => {
     expect(response.headers['access-control-allow-origin']).not.toBe('*');
   });
 });
+
+describe('GET /api/v1/auth/me', () => {
+  it('recusa acesso sem sessão, sem revelar se a conta existe', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/auth/me' });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({ error: { code: 'UNAUTHENTICATED' } });
+  });
+});
+
+describe('GET /api/v1/auth/csrf', () => {
+  it('emite um token CSRF para as mutações autenticadas', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{ csrfToken: string }>();
+    expect(body.csrfToken.length).toBeGreaterThan(20);
+    expect(response.headers['set-cookie']).toBeTruthy();
+  });
+});
+
+describe('POST /api/v1/auth/login', () => {
+  it('rejeita payload inválido com o formato padronizado', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {},
+    });
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+  });
+});

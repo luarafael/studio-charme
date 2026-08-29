@@ -15,12 +15,9 @@ export function getScopedProfessionalId(request: FastifyRequest): string {
   if (!professional) {
     // Chegar aqui significa rota privada registrada sem `requireAuth`: é um erro
     // de programação, e falhar alto é melhor que devolver dados sem escopo.
-    throw new AppError(
-      'UNAUTHORIZED',
-      'Sua sessão expirou. Entre novamente.',
-      401,
-      'rota privada acessada sem requireAuth',
-    );
+    throw new AppError('UNAUTHENTICATED', 401, {
+      logDetail: 'rota privada acessada sem requireAuth',
+    });
   }
 
   return professional.id;
@@ -41,7 +38,7 @@ export function assertOwnership(
   const professionalId = getScopedProfessionalId(request);
 
   if (!record || record.professionalId !== professionalId) {
-    throw new AppError('NOT_FOUND', `${entityLabel} não encontrado.`, 404);
+    throw new AppError('NOT_FOUND', 404, { message: `${entityLabel} não encontrado.` });
   }
 }
 
