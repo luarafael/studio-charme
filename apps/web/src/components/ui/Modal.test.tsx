@@ -41,11 +41,36 @@ describe('Modal', () => {
     expect(dialog).toHaveAccessibleDescription('Revise os dados antes de enviar.');
   });
 
-  it('move o foco para dentro do diálogo ao abrir', async () => {
+  it('move o foco para o primeiro campo ao abrir, não para o botão Fechar', async () => {
     render(<ModalHarness />);
     await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
 
-    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+    expect(screen.getByLabelText('Observação')).toHaveFocus();
+  });
+
+  it('mantém o foco no campo enquanto o formulário re-renderiza a cada tecla', async () => {
+    function TypingHarness() {
+      const [open, setOpen] = useState(true);
+      const [value, setValue] = useState('');
+
+      return (
+        <Modal open={open} onClose={() => setOpen(false)} title="Novo atendimento">
+          <input
+            aria-label="Nome"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+          />
+        </Modal>
+      );
+    }
+
+    render(<TypingHarness />);
+    const input = screen.getByLabelText('Nome');
+    await userEvent.click(input);
+    await userEvent.type(input, 'Maria');
+
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('Maria');
   });
 
   it('fecha com a tecla Esc', async () => {

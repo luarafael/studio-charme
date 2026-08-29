@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -15,18 +15,35 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   );
 }
 
+function getInitialFocusTarget(container: HTMLElement): HTMLElement {
+  const field = container.querySelector<HTMLElement>(
+    'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), [data-autofocus]',
+  );
+  if (field) return field;
+
+  const focusables = getFocusableElements(container);
+  return focusables[0] ?? container;
+}
+
 /**
  * Prende o foco dentro do container enquanto estiver ativo e devolve o foco ao
  * elemento que abriu o overlay ao fechar.
  *
  * Sem isso, quem navega por teclado sai do modal com Tab e passa a interagir com
  * um conteúdo que visualmente está atrás de uma sobreposição.
+ *
+ * `onEscape` fica em ref de propósito: se entrar nas dependências do efeito, cada
+ * re-render do formulário (a cada tecla) reinicia a armadilha e o foco pula para
+ * o botão Fechar.
  */
 export function useFocusTrap(
   containerRef: RefObject<HTMLElement | null>,
   active: boolean,
   onEscape?: () => void,
 ): void {
+  const onEscapeRef = useRef(onEscape);
+  onEscapeRef.current = onEscape;
+
   useEffect(() => {
     if (!active) return;
 
@@ -35,19 +52,18 @@ export function useFocusTrap(
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
 
-    // Foca o primeiro elemento interativo; se não houver, foca o próprio
-    // container para que leitores de tela anunciem o conteúdo do diálogo.
-    const focusables = getFocusableElements(container);
-    const initialTarget = focusables[0] ?? container;
-    if (initialTarget === container && !container.hasAttribute('tabindex')) {
-      container.setAttribute('tabindex', '-1');
+    if (!container.contains(document.activeElement)) {
+      const initialTarget = getInitialFocusTarget(container);
+      if (initialTarget === container && !container.hasAttribute('tabindex')) {
+        container.setAttribute('tabindex', '-1');
+      }
+      initialTarget.focus({ preventScroll: true });
     }
-    initialTarget.focus({ preventScroll: true });
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && onEscape) {
+      if (event.key === 'Escape' && onEscapeRef.current) {
         event.stopPropagation();
-        onEscape();
+        onEscapeRef.current();
         return;
       }
 
@@ -78,5 +94,5 @@ export function useFocusTrap(
       document.removeEventListener('keydown', handleKeyDown, true);
       previouslyFocused?.focus({ preventScroll: true });
     };
-  }, [containerRef, active, onEscape]);
+  }, [containerRef, active]);
 }
