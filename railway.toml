@@ -5,7 +5,7 @@
 
 [build]
 builder = "NIXPACKS"
-buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @studio-charme/api db:generate && pnpm --filter @studio-charme/api build"
+buildCommand = "pnpm --filter @studio-charme/api db:generate && pnpm --filter @studio-charme/api build"
 
 [deploy]
 startCommand = "node apps/api/dist/server.js"

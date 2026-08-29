@@ -1,4 +1,11 @@
-# Node 20 e pnpm 11, iguais ao packageManager da raiz.
+# O Corepack embutido no Node 20 quebra o pnpm 11
+# (ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING). Instalamos o pnpm via npm
+# e usamos Node 22, que é o runtime da API no Railway.
 [variables]
-NIXPACKS_NODE_VERSION = "20"
-NIXPACKS_PNPM_VERSION = "11.17.0"
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.install]
+cmds = [
+  "npm install -g pnpm@11.17.0",
+  "pnpm install --frozen-lockfile",
+]
