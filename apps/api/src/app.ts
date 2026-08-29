@@ -63,7 +63,7 @@ export async function buildApp(env: Env): Promise<AppInstance> {
           },
     genReqId: () => randomUUID(),
     trustProxy: true,
-    bodyLimit: 1_048_576,
+    bodyLimit: 2_000_000,
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);

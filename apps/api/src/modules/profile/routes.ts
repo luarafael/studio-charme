@@ -30,6 +30,7 @@ export async function profileRoutes(app: AppInstance): Promise<void> {
     '/professionals/me/photo',
     {
       preHandler: [app.requireAuth, app.requireCsrf],
+      bodyLimit: 2_000_000,
       schema: {
         body: updateProfilePhotoBodySchema,
         response: { 200: profilePhotoResponseSchema },

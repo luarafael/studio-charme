@@ -1,6 +1,6 @@
 -- Alertas internos por profissional e inscrições de push no celular.
 
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
     "id" UUID NOT NULL,
     "professionalId" UUID NOT NULL,
     "type" VARCHAR(40) NOT NULL,
@@ -14,15 +14,19 @@ CREATE TABLE "notifications" (
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "notifications_professionalId_createdAt_idx" ON "notifications"("professionalId", "createdAt");
-CREATE INDEX "notifications_professionalId_readAt_idx" ON "notifications"("professionalId", "readAt");
+CREATE INDEX IF NOT EXISTS "notifications_professionalId_createdAt_idx" ON "notifications"("professionalId", "createdAt");
+CREATE INDEX IF NOT EXISTS "notifications_professionalId_readAt_idx" ON "notifications"("professionalId", "readAt");
 
-ALTER TABLE "notifications"
-  ADD CONSTRAINT "notifications_professionalId_fkey"
-  FOREIGN KEY ("professionalId") REFERENCES "professionals"("id")
-  ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "notifications"
+    ADD CONSTRAINT "notifications_professionalId_fkey"
+    FOREIGN KEY ("professionalId") REFERENCES "professionals"("id")
+    ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "push_subscriptions" (
+CREATE TABLE IF NOT EXISTS "push_subscriptions" (
     "id" UUID NOT NULL,
     "professionalId" UUID NOT NULL,
     "endpoint" TEXT NOT NULL,
@@ -35,10 +39,14 @@ CREATE TABLE "push_subscriptions" (
     CONSTRAINT "push_subscriptions_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "push_subscriptions_endpoint_key" ON "push_subscriptions"("endpoint");
-CREATE INDEX "push_subscriptions_professionalId_idx" ON "push_subscriptions"("professionalId");
+CREATE UNIQUE INDEX IF NOT EXISTS "push_subscriptions_endpoint_key" ON "push_subscriptions"("endpoint");
+CREATE INDEX IF NOT EXISTS "push_subscriptions_professionalId_idx" ON "push_subscriptions"("professionalId");
 
-ALTER TABLE "push_subscriptions"
-  ADD CONSTRAINT "push_subscriptions_professionalId_fkey"
-  FOREIGN KEY ("professionalId") REFERENCES "professionals"("id")
-  ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "push_subscriptions"
+    ADD CONSTRAINT "push_subscriptions_professionalId_fkey"
+    FOREIGN KEY ("professionalId") REFERENCES "professionals"("id")
+    ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
