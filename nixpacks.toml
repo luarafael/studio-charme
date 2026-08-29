@@ -7,5 +7,6 @@ NIXPACKS_NODE_VERSION = "22"
 [phases.install]
 cmds = [
   "npm install -g pnpm@11.17.0",
-  "pnpm install --frozen-lockfile",
+  # NODE_ENV=production no Railway pula devDependencies; o tsup fica de fora e o build quebra.
+  "pnpm install --frozen-lockfile --prod=false",
 ]
