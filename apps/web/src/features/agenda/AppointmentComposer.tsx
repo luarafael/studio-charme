@@ -1,27 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Link } from 'react-router';
 import {
-  addMinutes,
   brazilianPhoneSchema,
   formatCents,
-  generateSlotsForRanges,
-  getWeekdayFromIsoDate,
   isoDateSchema,
   maskBrazilianPhone,
-  minutesToTime,
   occupiesSchedule,
-  resolveDaySchedule,
   timeOfDaySchema,
   uuidSchema,
-  zonedDateTimeToUtc,
   toZonedIsoDate,
   type AppointmentDto,
-  type AvailabilityOverrideDto,
-  type BusinessHourDto,
   type ClientDto,
   type IsoDate,
   type ServiceDto,
@@ -35,6 +27,7 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Alert } from '@/components/ui/Alert';
 import { Modal } from '@/components/ui/Modal';
+import { formatTime } from '@/features/agenda/format';
 import { api, ApiClientError } from '@/lib/api';
 
 type AppointmentComposerProps = {
@@ -53,7 +46,10 @@ type AppointmentComposerProps = {
 const composerSchema = z
   .object({
     date: isoDateSchema,
-    time: timeOfDaySchema,
+    time: z
+      .string()
+      .transform((value) => value.slice(0, 5))
+      .pipe(timeOfDaySchema),
     serviceIds: z.array(uuidSchema).min(1, 'Selecione ao menos um serviço.'),
     notes: z.string().trim().max(2000).optional(),
     clientMode: z.enum(['existing', 'new']),
@@ -96,8 +92,6 @@ const composerSchema = z
 type ComposerInput = z.infer<typeof composerSchema>;
 
 const EMPTY_SERVICE_IDS: string[] = [];
-const SALON_OPEN_MINUTE = 8 * 60;
-const SALON_CLOSE_MINUTE = 19 * 60;
 
 export function AppointmentComposer({ open, onClose, date, onSaved }: AppointmentComposerProps) {
   const queryClient = useQueryClient();
@@ -116,12 +110,6 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
     queryFn: () => api<{ items: ServiceDto[] }>('/services'),
     enabled: open,
   });
-  const hours = useQuery({
-    queryKey: ['availability-hours'],
-    queryFn: () => api<{ items: BusinessHourDto[] }>('/availability/hours'),
-    enabled: open,
-  });
-
   const form = useForm<ComposerInput, unknown, ComposerInput>({
     resolver: zodResolver(composerSchema),
     defaultValues: {
@@ -137,17 +125,8 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
   const selectedDate = useWatch({ control: form.control, name: 'date' }) ?? initialDate;
   const selectedServiceIds =
     useWatch({ control: form.control, name: 'serviceIds' }) ?? EMPTY_SERVICE_IDS;
-  const selectedTime = useWatch({ control: form.control, name: 'time' });
   const clientMode = useWatch({ control: form.control, name: 'clientMode' });
 
-  const overrides = useQuery({
-    queryKey: ['availability-overrides', selectedDate],
-    queryFn: () =>
-      api<{ items: AvailabilityOverrideDto[] }>('/availability/overrides', {
-        search: { from: selectedDate, to: selectedDate },
-      }),
-    enabled: open,
-  });
   const dayAppointments = useQuery({
     queryKey: ['appointments', selectedDate],
     queryFn: () =>
@@ -168,73 +147,13 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
     : 0;
   const totalPriceCents = selectedServices.reduce((sum, item) => sum + item.priceCents, 0);
 
-  const slots = useMemo(() => {
-    if (durationMinutes <= 0) return [];
-    const weekday = getWeekdayFromIsoDate(selectedDate);
-    const allHours = hours.data?.items ?? [];
-    const weekdayRanges = allHours
-      .filter((item) => item.weekday === weekday)
-      .map((item) => ({ startMinute: item.startMinute, endMinute: item.endMinute }));
-    const dayOverrides = (overrides.data?.items ?? [])
-      .filter((item) => item.date === selectedDate)
-      .map((item) => ({
-        type: item.type,
-        startMinute: item.startMinute,
-        endMinute: item.endMinute,
-      }));
-    const resolved = resolveDaySchedule(weekdayRanges, dayOverrides);
-    if (resolved.closed) return [];
-
-    // Sem jornada salva, a área interna ainda oferece 8h–19h. Depois que a
-    // profissional publica horários, um dia sem faixa fica sem slots — não inventa expediente.
-    const ranges =
-      resolved.ranges.length > 0
-        ? resolved.ranges
-        : allHours.length === 0
-          ? [{ startMinute: SALON_OPEN_MINUTE, endMinute: SALON_CLOSE_MINUTE }]
-          : [];
-    if (ranges.length === 0) return [];
-
-    const extraBusy = resolved.extraBusy.map((range) => {
-      const startsAt = zonedDateTimeToUtc(selectedDate, minutesToTime(range.startMinute));
-      return {
-        startsAt,
-        blockedUntil: addMinutes(startsAt, range.endMinute - range.startMinute),
-      };
-    });
-
-    return generateSlotsForRanges({
-      date: selectedDate,
-      ranges,
-      durationMinutes,
-      bufferAfterMinutes,
-      busy: [
-        ...(dayAppointments.data?.items ?? [])
-          .filter((item) => occupiesSchedule(item.status))
-          .map((item) => ({
-            startsAt: new Date(item.startsAt),
-            blockedUntil: new Date(item.blockedUntil),
-          })),
-        ...extraBusy,
-      ],
-    });
-  }, [
-    dayAppointments.data?.items,
-    selectedDate,
-    durationMinutes,
-    bufferAfterMinutes,
-    hours.data?.items,
-    overrides.data?.items,
-  ]);
-
-  const availableSlots = useMemo(() => slots.filter((slot) => slot.available), [slots]);
-
-  useEffect(() => {
-    if (availableSlots.length === 0) return;
-    if (!availableSlots.some((slot) => slot.time === selectedTime)) {
-      form.setValue('time', availableSlots[0]!.time);
-    }
-  }, [availableSlots, form, selectedTime]);
+  const busyThatDay = useMemo(
+    () =>
+      (dayAppointments.data?.items ?? [])
+        .filter((item) => occupiesSchedule(item.status))
+        .map((item) => `${formatTime(item.startsAt)} ${item.client.name}`),
+    [dayAppointments.data?.items],
+  );
 
   const createClient = useMutation({
     mutationFn: (body: { name: string; phone: string; consentGiven: true }) =>
@@ -295,7 +214,7 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
       open={open}
       onClose={onClose}
       title="Novo atendimento"
-      description="O horário é bloqueado só na sua agenda. Nenhuma outra profissional vê este cadastro."
+      description="Pode ser qualquer dia e qualquer horário. Só não dá para marcar em cima de outro atendimento seu."
       size="lg"
       footer={
         <>
@@ -449,17 +368,6 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
             </p>
           )}
 
-          {(hours.data?.items.length ?? 0) === 0 && !hours.isLoading ? (
-            <Alert tone="info" title="Jornada ainda não publicada">
-              Os horários abaixo usam 8h às 19h só nesta tela. No site, a cliente só vê slots
-              depois de você salvar a jornada em{' '}
-              <Link to="/app/horarios" className="text-accent-text underline-offset-2 hover:underline">
-                Horários
-              </Link>
-              .
-            </Alert>
-          ) : null}
-
           <div>
             <p className="text-brown-900 mb-2 text-sm font-semibold">Dia do atendimento</p>
             <DatePicker
@@ -472,20 +380,17 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
             />
           </div>
 
-          <Field label="Horário" required error={form.formState.errors.time?.message}>
-            {(props) => (
-              <Select {...props} {...form.register('time')} disabled={availableSlots.length === 0}>
-                {availableSlots.length === 0 ? (
-                  <option value={selectedTime}>Nenhum horário livre neste dia</option>
-                ) : (
-                  availableSlots.map((slot) => (
-                    <option key={slot.time} value={slot.time}>
-                      {slot.time}
-                    </option>
-                  ))
-                )}
-              </Select>
-            )}
+          <Field
+            label="Horário"
+            required
+            error={form.formState.errors.time?.message}
+            hint={
+              busyThatDay.length > 0
+                ? `Já neste dia: ${busyThatDay.join(', ')}.`
+                : 'Qualquer horário serve, inclusive fora da jornada publicada no site.'
+            }
+          >
+            {(props) => <Input {...props} type="time" {...form.register('time')} />}
           </Field>
 
           <Field label="Observações" error={form.formState.errors.notes?.message}>
