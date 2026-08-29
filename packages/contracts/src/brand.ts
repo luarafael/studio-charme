@@ -17,3 +17,11 @@ export const profilePhotoResponseSchema = z.object({
   professional: authenticatedProfessionalSchema,
 });
 export type ProfilePhotoResponse = z.infer<typeof profilePhotoResponseSchema>;
+
+export const updateProfileBodySchema = z.object({
+  name: z.string().trim().min(2, 'Informe seu nome.').max(120, 'O nome é muito longo.'),
+});
+export type UpdateProfileBody = z.infer<typeof updateProfileBodySchema>;
+
+export const profileResponseSchema = profilePhotoResponseSchema;
+export type ProfileResponse = ProfilePhotoResponse;

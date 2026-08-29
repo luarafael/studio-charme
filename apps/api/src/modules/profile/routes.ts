@@ -1,8 +1,18 @@
-import { profilePhotoResponseSchema, updateProfilePhotoBodySchema } from '@studio-charme/contracts';
+import {
+  profilePhotoResponseSchema,
+  profileResponseSchema,
+  updateProfileBodySchema,
+  updateProfilePhotoBodySchema,
+} from '@studio-charme/contracts';
 import { z } from 'zod';
 import type { AppInstance } from '../../types/app.js';
 import { getScopedProfessionalId } from '../../lib/scope.js';
-import { getPublicProfessionalPhoto, removeOwnPhoto, updateOwnPhoto } from './service.js';
+import {
+  getPublicProfessionalPhoto,
+  removeOwnPhoto,
+  updateOwnPhoto,
+  updateOwnProfile,
+} from './service.js';
 
 export async function profileRoutes(app: AppInstance): Promise<void> {
   const publicLimit = { max: 40, timeWindow: '1 minute' };
@@ -23,6 +33,26 @@ export async function profileRoutes(app: AppInstance): Promise<void> {
         .header('Cross-Origin-Resource-Policy', 'cross-origin')
         .header('Last-Modified', photo.updatedAt.toUTCString())
         .send(photo.bytes);
+    },
+  );
+
+  app.patch(
+    '/professionals/me',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        body: updateProfileBodySchema,
+        response: { 200: profileResponseSchema },
+      },
+    },
+    async (request) => {
+      const professional = await updateOwnProfile(
+        app.prisma,
+        request,
+        getScopedProfessionalId(request),
+        request.body,
+      );
+      return { professional };
     },
   );
 

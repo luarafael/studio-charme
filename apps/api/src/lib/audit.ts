@@ -41,6 +41,7 @@ export const AUDIT_ACTIONS = {
 
   PROFILE_PHOTO_UPDATED: 'professional.photo.updated',
   PROFILE_PHOTO_REMOVED: 'professional.photo.removed',
+  PROFILE_UPDATED: 'professional.updated',
 
   /** Tentativa de acessar dado de outra profissional. */
   ACCESS_DENIED: 'security.access_denied',

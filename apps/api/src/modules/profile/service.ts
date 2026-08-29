@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type {
   AuthenticatedProfessional,
+  UpdateProfileBody,
   UpdateProfilePhotoBody,
 } from '@studio-charme/contracts';
 import type { FastifyRequest } from 'fastify';
@@ -50,6 +51,28 @@ async function loadAuthenticated(
     },
   });
   return toAuthenticatedProfessional(row);
+}
+
+export async function updateOwnProfile(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  body: UpdateProfileBody,
+): Promise<AuthenticatedProfessional> {
+  await prisma.professional.update({
+    where: { id: professionalId },
+    data: { name: body.name },
+  });
+
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.PROFILE_UPDATED,
+    entity: 'professional',
+    entityId: professionalId,
+    professionalId,
+    metadata: { name: body.name },
+  });
+
+  return loadAuthenticated(prisma, professionalId);
 }
 
 export async function updateOwnPhoto(

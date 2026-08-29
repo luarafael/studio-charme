@@ -1,8 +1,8 @@
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { CalendarDays, Clock, History, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react';
-import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { ProfessionalAreaName } from '@/features/profile/ProfessionalAreaName';
 import { ProfessionalPhoto } from '@/features/profile/ProfessionalPhoto';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { cn } from '@/lib/cn';
@@ -28,8 +28,12 @@ export function AppLayout() {
       <aside className="bg-brown-900 text-cream hidden flex-col lg:flex">
         <div className="flex items-center gap-3 px-5 py-6">
           {professional && <ProfessionalPhoto professional={professional} className="size-10" />}
-          <div>
-            <p className="font-display text-gold-500 text-lg leading-none">{siteConfig.name}</p>
+          <div className="min-w-0">
+            {professional ? (
+              <ProfessionalAreaName professional={professional} />
+            ) : (
+              <p className="font-display text-gold-500 text-lg leading-none">Área da profissional</p>
+            )}
             <p className="text-cream/70 mt-1 text-xs">Área da profissional</p>
           </div>
         </div>
@@ -62,7 +66,9 @@ export function AppLayout() {
             )}
             <div className="min-w-0">
               <p className="text-brown-500 text-xs tracking-wide uppercase">Conta ativa</p>
-              <p className="text-brown-900 truncate font-semibold">{professional?.name}</p>
+              {professional ? (
+                <ProfessionalAreaName professional={professional} variant="header" />
+              ) : null}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
