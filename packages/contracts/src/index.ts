@@ -3,6 +3,7 @@ export * from './auth.js';
 export * from './datetime.js';
 export * from './enums.js';
 export * from './errors.js';
+export * from './finance.js';
 export * from './money.js';
 export * from './pagination.js';
 export * from './phone.js';

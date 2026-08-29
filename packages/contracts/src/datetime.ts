@@ -173,6 +173,18 @@ export function minutesToTime(minutes: number): TimeOfDay {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
+/**
+ * Datas de competência (`@db.Date`) são gravadas como meia-noite UTC.
+ * Não passar pelo fuso do salão: 29/08 00:00Z viraria 28/08 em Fortaleza.
+ */
+export function utcDateToIsoDate(value: Date): IsoDate {
+  return value.toISOString().slice(0, 10) as IsoDate;
+}
+
+export function isoDateToUtcDate(date: IsoDate): Date {
+  return new Date(`${date}T00:00:00.000Z`);
+}
+
 export function addIsoDateDays(date: IsoDate, days: number): IsoDate {
   const [year, month, day] = date.split('-').map(Number) as [number, number, number];
   const shifted = new Date(Date.UTC(year, month - 1, day + days));

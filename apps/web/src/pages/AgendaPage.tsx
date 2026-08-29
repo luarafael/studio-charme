@@ -24,6 +24,7 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { useToast } from '@/hooks/useToast';
 import { api, ApiClientError } from '@/lib/api';
 import { AppointmentComposer } from '@/features/agenda/AppointmentComposer';
+import { PaymentComposer } from '@/features/finance/PaymentComposer';
 import { formatIsoDateLong, formatTime } from '@/features/agenda/format';
 import {
   APPOINTMENT_STATUS_ACTION_LABEL,
@@ -44,6 +45,7 @@ export default function AgendaPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<AppointmentDto | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [payTarget, setPayTarget] = useState<AppointmentDto | null>(null);
 
   const list = useQuery({
     queryKey: ['appointments', date],
@@ -72,8 +74,9 @@ export default function AgendaPage() {
       return;
     }
     try {
-      await statusMutation.mutateAsync({ id: appointment.id, status });
+      const updated = await statusMutation.mutateAsync({ id: appointment.id, status });
       showToast({ tone: 'success', title: 'Agenda atualizada', description: APPOINTMENT_STATUS_LABELS[status] });
+      if (status === 'COMPLETED') setPayTarget(updated);
     } catch (error) {
       showToast({
         tone: 'danger',
@@ -184,6 +187,11 @@ export default function AgendaPage() {
                               {APPOINTMENT_STATUS_ACTION_LABEL[status] ?? status}
                             </Button>
                           ))}
+                          {item.status === 'COMPLETED' && (
+                            <Button size="sm" variant="secondary" onClick={() => setPayTarget(item)}>
+                              Receber
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardBody>
@@ -201,6 +209,13 @@ export default function AgendaPage() {
         onClose={() => setComposerOpen(false)}
         date={date}
         appointments={items}
+      />
+
+      <PaymentComposer
+        key={payTarget?.id ?? 'avulso'}
+        open={payTarget !== null}
+        onClose={() => setPayTarget(null)}
+        appointment={payTarget ?? undefined}
       />
 
       <Modal

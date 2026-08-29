@@ -76,6 +76,7 @@ const composerSchema = createAppointmentBodySchema
 type ComposerInput = z.infer<typeof composerSchema>;
 
 const EMPTY_SERVICE_IDS: string[] = [];
+const SALON_OPEN_MINUTE = 8 * 60;
 const SALON_CLOSE_MINUTE = 19 * 60;
 
 export function AppointmentComposer({ open, onClose, date, appointments }: AppointmentComposerProps) {
