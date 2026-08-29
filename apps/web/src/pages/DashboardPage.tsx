@@ -16,8 +16,6 @@ import { Card, CardBody, CardTitle } from '@/components/ui/Card';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Field } from '@/components/ui/Field';
-import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
@@ -73,8 +71,7 @@ export default function DashboardPage() {
   const [anchor, setAnchor] = useState<IsoDate>(today);
   const range = rangeForPeriod(period, anchor);
   const noun = periodNoun(period);
-  const [cancelTarget, setCancelTarget] = useState<AppointmentDto | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<AppointmentDto | null>(null);
 
   const dashboard = useQuery({
     queryKey: ['dashboard', range.from, range.to],
@@ -82,15 +79,13 @@ export default function DashboardPage() {
       api<DashboardDto>('/dashboard', { search: { from: range.from, to: range.to } }),
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: (input: { id: string; cancelReason: string }) =>
-      api<AppointmentDto>(`/appointments/${input.id}/status`, {
-        method: 'POST',
-        body: { status: 'CANCELLED', cancelReason: input.cancelReason },
-      }),
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/appointments/${id}`, { method: 'DELETE' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      setDeleteTarget(null);
+      showToast({ tone: 'success', title: 'Atendimento excluído' });
     },
   });
 
@@ -109,7 +104,6 @@ export default function DashboardPage() {
   const data = dashboard.data;
 
   function appointmentActions(item: AppointmentDto) {
-    const canCancel = item.status !== 'CANCELLED' && item.status !== 'COMPLETED' && item.status !== 'NO_SHOW';
     return (
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
@@ -120,19 +114,14 @@ export default function DashboardPage() {
         >
           Editar
         </Button>
-        {canCancel && (
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={<Trash2 className="size-3.5" aria-hidden="true" />}
-            onClick={() => {
-              setCancelTarget(item);
-              setCancelReason('');
-            }}
-          >
-            Excluir
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          leadingIcon={<Trash2 className="size-3.5" aria-hidden="true" />}
+          onClick={() => setDeleteTarget(item)}
+        >
+          Excluir
+        </Button>
       </div>
     );
   }
@@ -295,33 +284,27 @@ export default function DashboardPage() {
       )}
 
       <Modal
-        open={cancelTarget !== null}
-        onClose={() => setCancelTarget(null)}
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
         title="Excluir atendimento?"
-        description="O horário é cancelado na sua agenda. Informe o motivo para o histórico."
+        description="O horário some da agenda do período, dos próximos e do histórico. Esta ação não se desfaz."
         footer={
           <>
-            <Button variant="ghost" onClick={() => setCancelTarget(null)}>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
               Voltar
             </Button>
             <Button
               variant="danger"
-              isLoading={cancelMutation.isPending}
+              isLoading={deleteMutation.isPending}
               onClick={() => {
-                if (!cancelTarget || cancelReason.trim().length < 2) return;
-                void cancelMutation
-                  .mutateAsync({ id: cancelTarget.id, cancelReason: cancelReason.trim() })
-                  .then(() => {
-                    setCancelTarget(null);
-                    showToast({ tone: 'success', title: 'Atendimento cancelado' });
-                  })
-                  .catch((error: unknown) => {
-                    showToast({
-                      tone: 'danger',
-                      title: 'Não foi possível cancelar',
-                      description: error instanceof ApiClientError ? error.message : 'Tente novamente.',
-                    });
+                if (!deleteTarget) return;
+                void deleteMutation.mutateAsync(deleteTarget.id).catch((error: unknown) => {
+                  showToast({
+                    tone: 'danger',
+                    title: 'Não foi possível excluir',
+                    description: error instanceof ApiClientError ? error.message : 'Tente novamente.',
                   });
+                });
               }}
             >
               Excluir
@@ -329,15 +312,11 @@ export default function DashboardPage() {
           </>
         }
       >
-        <Field label="Motivo" required>
-          {(props) => (
-            <Input
-              {...props}
-              value={cancelReason}
-              onChange={(event) => setCancelReason(event.target.value)}
-            />
-          )}
-        </Field>
+        <p className="text-brown-700 text-sm">
+          {deleteTarget
+            ? `${deleteTarget.client.name} · ${formatAppointmentWhen(deleteTarget.startsAt)}.`
+            : null}
+        </p>
       </Modal>
     </div>
   );
