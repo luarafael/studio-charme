@@ -1,5 +1,6 @@
 import { Instagram, MessageCircle } from 'lucide-react';
-import { buildWhatsAppUrl, publicProfessionals, siteConfig } from '@/config/site';
+import { buildWhatsAppUrl, publicProfessionals } from '@/config/site';
+import { siteBookingMessage } from '@/lib/whatsappMessages';
 import { Section, SectionHeader } from '@/components/layout/Section';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -56,7 +57,7 @@ export function ProfessionalsSection() {
                 <a
                   href={buildWhatsAppUrl(
                     professional.whatsApp,
-                    `Olá, ${professional.name}! Vim pelo site do ${siteConfig.name} e gostaria de agendar um horário.`,
+                    siteBookingMessage(professional.name),
                   )}
                   target="_blank"
                   rel="noopener noreferrer"

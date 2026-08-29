@@ -1,6 +1,7 @@
 import { Instagram, MessageCircle } from 'lucide-react';
 import { formatBrazilianPhone } from '@studio-charme/contracts';
-import { buildWhatsAppUrl, publicProfessionals, siteConfig } from '@/config/site';
+import { buildWhatsAppUrl, publicProfessionals } from '@/config/site';
+import { siteHelloMessage } from '@/lib/whatsappMessages';
 import { Section, SectionHeader } from '@/components/layout/Section';
 import { Card, CardBody } from '@/components/ui/Card';
 import { buttonClasses } from '@/components/ui/styles';
@@ -31,7 +32,7 @@ export function ContactSection() {
                 <a
                   href={buildWhatsAppUrl(
                     professional.whatsApp,
-                    `Olá, ${professional.name}! Vim pelo site do ${siteConfig.name}.`,
+                    siteHelloMessage(professional.name),
                   )}
                   target="_blank"
                   rel="noopener noreferrer"

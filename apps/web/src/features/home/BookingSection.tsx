@@ -10,6 +10,7 @@ import {
   maskBrazilianPhone,
 } from '@studio-charme/contracts';
 import { buildWhatsAppUrl, publicProfessionals, siteConfig } from '@/config/site';
+import { bookingRequestMessage } from '@/lib/whatsappMessages';
 import { showcaseServices } from '@/config/services';
 import { Section, SectionHeader } from '@/components/layout/Section';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -139,19 +140,13 @@ export function BookingSection() {
       return;
     }
 
-    const message = [
-      `Olá! Gostaria de solicitar um agendamento no ${siteConfig.name}.`,
-      '',
-      `*Nome:* ${parsed.clientName}`,
-      `*WhatsApp:* ${formatBrazilianPhone(parsed.clientPhone)}`,
-      `*Serviço:* ${service?.name ?? 'A combinar'}`,
-      `*Profissional:* ${professional?.name ?? 'Qualquer uma disponível'}`,
-      parsed.notes ? `*Observações:* ${parsed.notes}` : null,
-      '',
-      'Poderia me informar os horários disponíveis?',
-    ]
-      .filter((line) => line !== null)
-      .join('\n');
+    const message = bookingRequestMessage({
+      clientName: parsed.clientName,
+      clientPhone: formatBrazilianPhone(parsed.clientPhone),
+      serviceName: service?.name,
+      professionalName: professional?.name,
+      notes: parsed.notes,
+    });
 
     // Sem profissional escolhida, a mensagem vai para o contato geral do studio.
     const destination = professional?.whatsApp ?? siteConfig.primaryWhatsApp;

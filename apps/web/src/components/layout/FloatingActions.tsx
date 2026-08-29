@@ -1,5 +1,6 @@
 import { ArrowUp, MessageCircle } from 'lucide-react';
 import { buildWhatsAppUrl, siteConfig } from '@/config/site';
+import { siteBookingMessage } from '@/lib/whatsappMessages';
 import { cn } from '@/lib/cn';
 import { useScrolledPast } from '@/hooks/useScrolledPast';
 import { usePrefersReducedMotion } from '@/hooks/useMediaQuery';
@@ -27,10 +28,7 @@ export function FloatingActions() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30">
       <div className="max-w-content mx-auto flex items-end justify-between px-4 pb-4 sm:px-8">
         <a
-          href={buildWhatsAppUrl(
-            siteConfig.primaryWhatsApp,
-            `Olá! Vim pelo site do ${siteConfig.name} e gostaria de agendar um atendimento.`,
-          )}
+          href={buildWhatsAppUrl(siteConfig.primaryWhatsApp, siteBookingMessage())}
           target="_blank"
           rel="noopener noreferrer"
           className="h-13 shadow-overlay pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 sm:hidden"

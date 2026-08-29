@@ -1,4 +1,5 @@
-import { buildWhatsAppUrl, siteConfig } from '@/config/site';
+import { buildWhatsAppUrl } from '@/config/site';
+import { appointmentConfirmationMessage } from '@/lib/whatsappMessages';
 
 export function buildAppointmentConfirmationMessage(input: {
   clientName: string;
@@ -6,15 +7,7 @@ export function buildAppointmentConfirmationMessage(input: {
   serviceNames: string;
   when: string;
 }): string {
-  return [
-    `Olá, ${input.clientName}! Aqui é o ${siteConfig.name}.`,
-    '',
-    `Seu horário com *${input.professionalName}* está *confirmado*.`,
-    `*Serviço:* ${input.serviceNames}`,
-    `*Quando:* ${input.when}`,
-    '',
-    'Te esperamos! Se precisar remarcar, responda esta mensagem.',
-  ].join('\n');
+  return appointmentConfirmationMessage(input);
 }
 
 /** Abre o WhatsApp da cliente com a confirmação pronta para enviar. */

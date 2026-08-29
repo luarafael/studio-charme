@@ -1,5 +1,6 @@
 import { CalendarCheck, MessageCircle, Sparkles } from 'lucide-react';
 import { brandAssets, buildWhatsAppUrl, siteConfig } from '@/config/site';
+import { siteQuestionMessage } from '@/lib/whatsappMessages';
 import { buttonClasses } from '@/components/ui/styles';
 import { Container } from '@/components/layout/Container';
 
@@ -39,10 +40,7 @@ export function HeroSection() {
               </a>
 
               <a
-                href={buildWhatsAppUrl(
-                  siteConfig.primaryWhatsApp,
-                  `Olá! Vim pelo site do ${siteConfig.name} e gostaria de tirar uma dúvida.`,
-                )}
+                href={buildWhatsAppUrl(siteConfig.primaryWhatsApp, siteQuestionMessage())}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={buttonClasses({

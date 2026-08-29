@@ -15,6 +15,7 @@ import {
   type PublicCatalogDto,
 } from '@studio-charme/contracts';
 import { buildWhatsAppUrl, siteConfig } from '@/config/site';
+import { liveBookingFollowUpMessage } from '@/lib/whatsappMessages';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
@@ -81,15 +82,12 @@ export function LiveBookingForm({ catalog }: LiveBookingFormProps) {
 
   const whatsappUrl = useMemo(() => {
     if (!result) return null;
-    const message = [
-      `Olá, ${result.professionalName}! Enviei uma solicitação de agendamento pelo site do ${siteConfig.name}.`,
-      '',
-      `*Serviço:* ${result.serviceName}`,
-      `*Data:* ${result.date.split('-').reverse().join('/')}`,
-      `*Horário:* ${result.time}`,
-      '',
-      'O pedido no sistema está *aguardando confirmação*.',
-    ].join('\n');
+    const message = liveBookingFollowUpMessage({
+      professionalName: result.professionalName,
+      serviceName: result.serviceName,
+      date: result.date.split('-').reverse().join('/'),
+      time: result.time,
+    });
     return buildWhatsAppUrl(result.whatsapp || siteConfig.primaryWhatsApp, message);
   }, [result]);
 
