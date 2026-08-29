@@ -1,0 +1,10 @@
+{
+  "extends": "@studio-charme/config/tsconfig/base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "types": []
+  },
+  "include": ["src", "eslint.config.js", "vitest.config.ts"]
+}

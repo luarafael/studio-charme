@@ -1,64 +1,148 @@
-# Studio Charme ✨💄
+# Studio Charme
 
-[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/docs/Web/HTML)
-[![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/docs/Web/CSS)
-[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/docs/Web/JavaScript)
-[![GitHub](https://img.shields.io/github/license/luarafael/studio-charme?style=for-the-badge)](LICENSE)
+Aplicação web do Studio Charme: site institucional, agendamento on-line e área
+interna individual para as profissionais, com agenda, clientes e controle
+financeiro.
 
-<p align="center">
-  <img src="https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=800&q=80" width="400" alt="Studio Charme Banner"/>
-</p>
+O projeto nasceu como um site estático (preservado em [`legacy/`](./legacy)) e
+está sendo reconstruído como monorepo com frontend em React e API própria.
 
-## 🚀 Sobre o Projeto
+## Arquitetura
 
-O **Studio Charme** é um projeto desenvolvido durante o meu <strong>3º mês de estudos</strong> em programação, enquanto cursava HTML, CSS e iniciava meus primeiros passos em JavaScript.
+```
+apps/
+  web/        React + TypeScript + Vite + Tailwind CSS   -> Vercel
+  api/        Fastify + TypeScript + Prisma              -> Railway
+packages/
+  contracts/  schemas Zod, tipos e regras compartilhadas
+  config/     configurações compartilhadas de TypeScript e ESLint
+legacy/       site estático original, mantido como referência
+```
 
-> 🎓 Este projeto faz parte do meu portfólio de estudante e foi criado como exercício prático para consolidar os conhecimentos adquiridos no início da minha jornada em desenvolvimento web.
+O repositório é um **monorepo pnpm**. Cada pasta em `apps/` e `packages/` é um
+pacote independente (`@studio-charme/web`, `@studio-charme/api`,
+`@studio-charme/contracts`, `@studio-charme/config`), ligados por
+`workspace:*`. Um único `pnpm install` na raiz instala tudo.
 
-## 📝 Funcionalidades
+Regra fundamental: **o frontend nunca acessa o banco diretamente.** Toda leitura
+e escrita privada passa pela API, que é a única a conhecer a `DATABASE_URL` e a
+aplicar o isolamento de dados entre as profissionais.
 
-- Estrutura de site com HTML5 semântica
-- Estilização moderna e responsiva com CSS3
-- Primeiros scripts em JavaScript para interatividade
-- Páginas de Política de Privacidade e Termos de Uso
-- Layout pensado para experiência do usuário
+| Camada      | Tecnologia                                                     |
+| ----------- | -------------------------------------------------------------- |
+| Frontend    | React 19, TypeScript, Vite, Tailwind CSS v4, React Router      |
+| Estado      | TanStack Query                                                 |
+| Formulários | React Hook Form + Zod                                          |
+| API         | Node.js, TypeScript, Fastify                                   |
+| Banco       | PostgreSQL no Neon, via Prisma ORM com migrations              |
+| Sessão      | cookie `HttpOnly` + `Secure` + `SameSite`, senhas com Argon2id |
+| Testes      | Vitest, React Testing Library e Playwright                     |
+| Fuso        | `America/Fortaleza` em toda regra de agenda                    |
 
-## 💡 Destaques
+## Requisitos
 
-- Projeto desenvolvido no início da minha jornada em programação (3º mês de estudos)
-- Demonstração de evolução e dedicação desde os primeiros passos
-- Código limpo, comentado e organizado
-- Design moderno, mesmo sendo um projeto de iniciante
-- Foco em boas práticas e aprendizado contínuo
+- Node.js 20 ou superior (desenvolvido com 26)
+- pnpm 11 (`npm install -g pnpm`)
+- PostgreSQL: uma instância no [Neon](https://neon.tech) ou local para desenvolvimento
 
-## 🎯 Objetivo
+## Instalação
 
-O objetivo principal deste projeto foi aplicar na prática os conceitos aprendidos em sala de aula e cursos online, mostrando minha evolução e paixão por tecnologia desde o início da minha trajetória.
+```bash
+pnpm install
+```
 
-## 📚 Tecnologias Utilizadas
+Alguns pacotes compilam binários nativos (`argon2`, `sharp`, `esbuild`) ou geram
+código (`prisma`). O pnpm bloqueia esses scripts por padrão; os permitidos estão
+declarados em `onlyBuiltDependencies` no `pnpm-workspace.yaml`. Se a instalação
+avisar sobre builds ignorados, rode:
 
-<div align="center">
-  <img src="https://skillicons.dev/icons?i=html,css,js,git" alt="Tech Stack" />
-</div>
+```bash
+pnpm rebuild
+```
 
-- HTML5
-- CSS3
-- JavaScript (básico)
-- Git & GitHub
+## Variáveis de ambiente
 
-## 👨‍💻 Sobre Mim
+O arquivo [`.env.example`](./.env.example) documenta todas as variáveis, separadas
+por aplicação, e **não contém segredos**.
 
-Sou estudante de desenvolvimento web, atualmente no início da minha formação, buscando sempre aprender e evoluir. Este projeto representa meus primeiros passos e minha vontade de crescer na área!
+```bash
+# API
+cp .env.example apps/api/.env
+# Frontend (apenas valores públicos)
+cp .env.example apps/web/.env.local
+```
 
-## 📈 Evolução
+Gere os segredos aleatórios com:
 
-Este repositório será atualizado conforme avanço nos estudos, servindo como registro da minha evolução e aprendizado contínuo.
+```bash
+node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+```
 
-## 🤝 Conecte-se comigo
+Pontos de atenção:
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/luã-rafael-1434213a3/)
-[![Portfolio](https://img.shields.io/badge/Portfólio-000?style=for-the-badge&logo=vercel&logoColor=white)](https://seuportfolio.com)
+- No `apps/web/.env.local` mantenha somente as variáveis `VITE_*`. Tudo com esse
+  prefixo é embutido no bundle e fica visível para qualquer visitante.
+- `DATABASE_URL`, `SESSION_SECRET` e credenciais de e-mail e armazenamento vivem
+  exclusivamente no `apps/api/.env`.
+- `WEB_ORIGINS` lista as origens autorizadas no CORS, sem curinga.
+- A API se recusa a iniciar com configuração inválida: cookie não `Secure` em
+  produção, segredo curto, origem sem HTTPS ou documentação OpenAPI exposta.
 
-<p align="center">
-  <b>⭐ Se você gostou, deixe uma estrela e acompanhe minha evolução!</b>
-</p>
+## Desenvolvimento
+
+```bash
+pnpm dev          # sobe frontend e API juntos
+pnpm dev:web      # apenas o frontend  -> http://localhost:5173
+pnpm dev:api      # apenas a API       -> http://localhost:3333
+```
+
+## Verificação
+
+```bash
+pnpm typecheck    # TypeScript em modo estrito, sem emitir
+pnpm lint         # ESLint
+pnpm test         # testes unitários e de integração (Vitest)
+pnpm test:e2e     # fluxos de ponta a ponta (Playwright)
+pnpm format       # aplica o Prettier
+pnpm verify       # typecheck + lint + test, o mesmo que roda antes de um commit
+```
+
+## Banco de dados
+
+```bash
+pnpm db:migrate   # cria e aplica migrations em desenvolvimento
+pnpm db:seed      # dados iniciais, sem senhas reais
+```
+
+O seed cria os perfis das profissionais **sem senha definida**. O primeiro acesso
+é feito por convite ou recuperação de senha, então nenhuma credencial existe no
+repositório.
+
+Valores monetários são sempre inteiros em centavos, nunca `float`. Datas e
+horários são convertidos considerando `America/Fortaleza`, enquanto o banco
+armazena instantes em UTC.
+
+## Estrutura do frontend
+
+```
+apps/web/src/
+  app/          composição raiz, providers e Error Boundary
+  components/   componentes do design system e blocos reutilizáveis
+  config/       conteúdo institucional centralizado (contatos, galeria, textos)
+  features/     regras por domínio (auth, agenda, clientes, financeiro...)
+  layouts/      estruturas de página do site público e da área interna
+  lib/          utilitários e cliente HTTP
+  pages/        páginas roteadas
+  routes/       definição das rotas
+  styles/       design tokens e estilos base
+```
+
+Os tokens de cor, tipografia, espaçamento, raio e sombra ficam em
+`apps/web/src/styles/tokens.css`. A paleta parte das três cores originais da
+marca e o dourado claro nunca é usado como texto sobre fundo claro, porque não
+alcança o contraste mínimo AA — existe um tom escuro específico para isso.
+
+## Documentação relacionada
+
+- [`legacy/README.md`](./legacy/README.md) — site original e URLs preservadas
+- [`PROMPT_REFATORACAO_STUDIO_CHARME.md`](./PROMPT_REFATORACAO_STUDIO_CHARME.md) — especificação completa da refatoração

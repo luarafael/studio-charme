@@ -1,0 +1,31 @@
+{
+  "name": "studio-charme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @studio-charme/web --filter @studio-charme/api dev",
+    "dev:web": "pnpm --filter @studio-charme/web dev",
+    "dev:api": "pnpm --filter @studio-charme/api dev",
+    "build": "pnpm --filter @studio-charme/api build && pnpm --filter @studio-charme/web build",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @studio-charme/web test:e2e",
+    "db:generate": "pnpm --filter @studio-charme/api db:generate",
+    "db:migrate": "pnpm --filter @studio-charme/api db:migrate",
+    "db:seed": "pnpm --filter @studio-charme/api db:seed",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "typescript": "^5.9.3"
+  }
+}

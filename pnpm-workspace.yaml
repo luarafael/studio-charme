@@ -1,0 +1,17 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Scripts de instalação são bloqueados por padrão. Aqui ficam apenas os pacotes
+# que realmente precisam compilar binários nativos ou gerar código:
+#   argon2  -> binding nativo do hash de senha
+#   prisma  -> engines de query e geração do client
+#   esbuild -> binário usado por Vite, tsx e tsup
+#   sharp   -> conversão de imagens para WebP/AVIF
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - argon2
+  - esbuild
+  - prisma
+  - sharp
