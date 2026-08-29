@@ -71,7 +71,7 @@ export function SiteFooter() {
                   to="/entrar"
                   className="text-brown-200 hover:text-cream transition-colors"
                 >
-                  Área da equipe
+                  Entrar
                 </Link>
               </li>
             </ul>

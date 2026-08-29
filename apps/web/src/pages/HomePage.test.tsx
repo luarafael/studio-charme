@@ -42,6 +42,15 @@ describe('HomePage — correções de conteúdo exigidas', () => {
     expect(within(nav).queryByRole('link', { name: 'Inicio' })).not.toBeInTheDocument();
   });
 
+  it('oferece o botão Entrar para a equipe acessar a conta', () => {
+    renderHome();
+    const loginLinks = screen.getAllByRole('link', { name: 'Entrar' });
+    expect(loginLinks.length).toBeGreaterThan(0);
+    for (const link of loginLinks) {
+      expect(link).toHaveAttribute('href', '/entrar');
+    }
+  });
+
   it('usa "Conheça nossos serviços" com a concordância correta', () => {
     renderHome();
     expect(screen.getByRole('heading', { name: 'Conheça nossos serviços' })).toBeInTheDocument();

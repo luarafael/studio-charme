@@ -92,6 +92,17 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <Link
+              to="/entrar"
+              className={buttonClasses({
+                size: 'sm',
+                variant: 'outline',
+                className:
+                  'border-gold-400 text-gold-400 hover:border-gold-500 hover:bg-gold-500 hover:text-brown-900',
+              })}
+            >
+              Entrar
+            </Link>
             <a
               href="/#agendar"
               className={buttonClasses({
@@ -150,6 +161,13 @@ export function SiteHeader() {
               >
                 Agendar agora
               </a>
+              <Link
+                to="/entrar"
+                onClick={() => setMenuOpen(false)}
+                className="rounded-control border-gold-400 text-gold-400 hover:bg-gold-500 hover:text-brown-900 mt-2 flex h-12 items-center justify-center border font-semibold transition-colors"
+              >
+                Entrar
+              </Link>
             </nav>
           </Container>
         </div>
