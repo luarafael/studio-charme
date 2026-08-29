@@ -51,12 +51,21 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
 
-  const response = await fetch(url, {
-    method,
-    credentials: 'include',
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method,
+      credentials: 'include',
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+  } catch {
+    throw new ApiClientError(
+      0,
+      'INTERNAL_ERROR',
+      'Não foi possível conectar à API. Confira VITE_API_URL e o CORS (WEB_ORIGINS).',
+    );
+  }
 
   if (response.status === 204) return undefined as T;
 

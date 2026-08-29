@@ -74,7 +74,13 @@ export default function ResetPasswordPage() {
                       setFormError('Este link é inválido ou expirou. Solicite um novo.');
                       return;
                     }
-                    setFormError('Não foi possível salvar a senha. Tente novamente.');
+                    if (error instanceof ApiClientError) {
+                      setFormError(error.message);
+                      return;
+                    }
+                    setFormError(
+                      'Não foi possível falar com o servidor. Confira se o site está apontando para a API de produção.',
+                    );
                   }
                 })}
               >
