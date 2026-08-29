@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EXPENSE_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
-  PAYMENT_STATUS_LABELS,
   formatCents,
   rangeForPeriod,
   toZonedIsoDate,
@@ -13,9 +12,10 @@ import {
   type IsoDate,
   type PaymentDto,
 } from '@studio-charme/contracts';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Alert } from '@/components/ui/Alert';
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardTitle } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -24,10 +24,21 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Table } from '@/components/ui/Table';
 import { ExpenseComposer } from '@/features/finance/ExpenseComposer';
 import { PaymentComposer } from '@/features/finance/PaymentComposer';
+import { paymentSituationLabel, paymentSituationTone } from '@/features/finance/paymentSituation';
 import { PeriodToolbar, periodNoun } from '@/features/finance/PeriodToolbar';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { useToast } from '@/hooks/useToast';
 import { api, ApiClientError } from '@/lib/api';
+
+type ReceivableRow = {
+  key: string;
+  clientName: string | null;
+  dueOn: IsoDate;
+  methodLabel: string;
+  netCents: number;
+  payment?: PaymentDto;
+  appointmentId?: string;
+};
 
 export default function FinancePage() {
   useDocumentMeta({
@@ -65,6 +76,33 @@ export default function FinancePage() {
     queryFn: () => api<{ items: ExpenseDto[] }>('/expenses', { search: range }),
   });
 
+  const markPaid = useMutation({
+    mutationFn: (row: ReceivableRow) => {
+      if (row.payment) {
+        return api<PaymentDto>(`/payments/${row.payment.id}/pay`, { method: 'POST' });
+      }
+      return api<PaymentDto>('/payments', {
+        method: 'POST',
+        body: {
+          appointmentId: row.appointmentId,
+          amountCents: row.netCents,
+          discountCents: 0,
+          method: 'PIX',
+          paidOn: today,
+          status: 'PAID',
+        },
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      await queryClient.invalidateQueries({ queryKey: ['payments'] });
+      showToast({
+        tone: 'success',
+        title: 'Marcado como pago',
+        description: 'Saiu do A receber e entrou no histórico de recebimentos.',
+      });
+    },
+  });
   const deletePayment = useMutation({
     mutationFn: (id: string) => api(`/payments/${id}`, { method: 'DELETE' }),
     onSuccess: async () => {
@@ -110,7 +148,26 @@ export default function FinancePage() {
 
   const data = dashboard.data;
   const receivedItems = (payments.data?.items ?? []).filter((item) => item.status !== 'PENDING');
-  const receivableItems = (payments.data?.items ?? []).filter((item) => item.status === 'PENDING');
+  const receivableRows: ReceivableRow[] = [
+    ...(payments.data?.items ?? [])
+      .filter((item) => item.status === 'PENDING')
+      .map((item) => ({
+        key: `payment:${item.id}`,
+        clientName: item.clientName,
+        dueOn: item.paidOn,
+        methodLabel: PAYMENT_METHOD_LABELS[item.method],
+        netCents: item.netCents,
+        payment: item,
+      })),
+    ...(data?.receivableAppointments ?? []).map((item) => ({
+      key: `appointment:${item.appointmentId}`,
+      clientName: item.clientName,
+      dueOn: item.completedOn,
+      methodLabel: 'Atendimento',
+      netCents: item.remainingCents,
+      appointmentId: item.appointmentId,
+    })),
+  ].sort((left, right) => (left.dueOn < right.dueOn ? 1 : left.dueOn > right.dueOn ? -1 : 0));
 
   function paymentActions(row: PaymentDto) {
     return (
@@ -135,6 +192,53 @@ export default function FinancePage() {
         >
           Excluir
         </Button>
+      </div>
+    );
+  }
+
+  function receivableActions(row: ReceivableRow) {
+    return (
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          size="sm"
+          leadingIcon={<Check className="size-3.5" aria-hidden="true" />}
+          isLoading={markPaid.isPending && markPaid.variables?.key === row.key}
+          onClick={() => {
+            void markPaid.mutateAsync(row).catch((error: unknown) => {
+              showToast({
+                tone: 'danger',
+                title: 'Não foi possível marcar como pago',
+                description: error instanceof ApiClientError ? error.message : 'Tente novamente.',
+              });
+            });
+          }}
+        >
+          Pago
+        </Button>
+        {row.payment && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              leadingIcon={<Pencil className="size-3.5" aria-hidden="true" />}
+              onClick={() => {
+                setPaymentTarget(row.payment!);
+                setPaymentIntent('receivable');
+                setPaymentOpen(true);
+              }}
+            >
+              Editar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              leadingIcon={<Trash2 className="size-3.5" aria-hidden="true" />}
+              onClick={() => setPaymentToDelete(row.payment!)}
+            >
+              Excluir
+            </Button>
+          </>
+        )}
       </div>
     );
   }
@@ -226,15 +330,19 @@ export default function FinancePage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="text-brown-900 text-lg font-semibold">A receber</h2>
+        <p className="text-brown-600 -mt-1 text-sm">
+          Toque em Pago quando o valor entrar. Ele sai desta lista e do cálculo, e vai para os
+          recebimentos.
+        </p>
         {payments.isError && <Alert tone="danger">Não foi possível carregar os valores a receber.</Alert>}
         {payments.isLoading ? (
           <Skeleton className="h-32" />
         ) : (
           <Table
             caption="A receber no período"
-            rows={receivableItems}
-            getRowId={(row) => row.id}
-            renderRowActions={paymentActions}
+            rows={receivableRows}
+            getRowId={(row) => row.key}
+            renderRowActions={receivableActions}
             empty={
               <EmptyState
                 title={`Nada a receber neste ${noun}`}
@@ -247,9 +355,18 @@ export default function FinancePage() {
               />
             }
             columns={[
-              { key: 'paidOn', header: 'Data', render: (row) => row.paidOn.split('-').reverse().join('/') },
+              { key: 'paidOn', header: 'Data', render: (row) => row.dueOn.split('-').reverse().join('/') },
               { key: 'client', header: 'Cliente', render: (row) => row.clientName ?? 'Avulso' },
-              { key: 'method', header: 'Forma', render: (row) => PAYMENT_METHOD_LABELS[row.method] },
+              { key: 'method', header: 'Forma', render: (row) => row.methodLabel },
+              {
+                key: 'status',
+                header: 'Situação',
+                render: () => (
+                  <Badge tone="warning" withDot>
+                    Não pago
+                  </Badge>
+                ),
+              },
               {
                 key: 'net',
                 header: 'Valor',
@@ -287,7 +404,15 @@ export default function FinancePage() {
               { key: 'paidOn', header: 'Data', render: (row) => row.paidOn.split('-').reverse().join('/') },
               { key: 'client', header: 'Cliente', render: (row) => row.clientName ?? 'Avulso' },
               { key: 'method', header: 'Forma', render: (row) => PAYMENT_METHOD_LABELS[row.method] },
-              { key: 'status', header: 'Situação', render: (row) => PAYMENT_STATUS_LABELS[row.status] },
+              {
+                key: 'status',
+                header: 'Situação',
+                render: (row) => (
+                  <Badge tone={paymentSituationTone(row.status)} withDot>
+                    {paymentSituationLabel(row.status)}
+                  </Badge>
+                ),
+              },
               {
                 key: 'net',
                 header: 'Valor',

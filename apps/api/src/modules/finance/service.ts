@@ -4,6 +4,7 @@ import {
   netPaymentCents,
   paymentExceedsDue,
   paidTowardAppointmentCents,
+  toZonedIsoDate,
   utcDateOnlyRange,
   utcDateToIsoDate,
   type CreateExpenseBody,
@@ -264,6 +265,26 @@ export async function updatePayment(
   });
 
   return toPaymentDto(updated);
+}
+
+export async function markPaymentPaid(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+): Promise<PaymentDto> {
+  const current = await findOwnedPayment(prisma, professionalId, id);
+  if (current.status === 'PAID') return toPaymentDto(current);
+
+  return updatePayment(prisma, request, professionalId, id, {
+    amountCents: current.amountCents,
+    discountCents: current.discountCents,
+    method: current.method,
+    paidOn: toZonedIsoDate(new Date()),
+    notes: current.notes ?? undefined,
+    status: 'PAID',
+    clientId: current.clientId,
+  });
 }
 
 export async function deletePayment(

@@ -140,6 +140,14 @@ export const dashboardQuerySchema = z.object({
   to: isoDateSchema.optional(),
 });
 
+export const dashboardReceivableAppointmentSchema = z.object({
+  appointmentId: uuidSchema,
+  clientName: z.string(),
+  remainingCents: z.number().int(),
+  completedOn: isoDateSchema,
+});
+export type DashboardReceivableAppointment = z.infer<typeof dashboardReceivableAppointmentSchema>;
+
 export const dashboardSchema = z.object({
   todayCount: z.number().int(),
   upcomingCount: z.number().int(),
@@ -160,5 +168,7 @@ export const dashboardSchema = z.object({
   clientsServed: z.number().int(),
   todayAppointments: z.array(appointmentSchema),
   upcomingAppointments: z.array(appointmentSchema),
+  /** Atendimentos concluídos com valor ainda em aberto, sem lançamento a receber. */
+  receivableAppointments: z.array(dashboardReceivableAppointmentSchema),
 });
 export type DashboardDto = z.infer<typeof dashboardSchema>;

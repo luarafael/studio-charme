@@ -18,6 +18,7 @@ import {
   deletePayment,
   listExpenses,
   listPayments,
+  markPaymentPaid,
   updateExpense,
   updatePayment,
 } from './service.js';
@@ -55,6 +56,19 @@ export async function financeRoutes(app: AppInstance): Promise<void> {
       );
       return reply.status(201).send(created);
     },
+  );
+
+  app.post(
+    '/payments/:id/pay',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        response: { 200: paymentSchema },
+      },
+    },
+    async (request) =>
+      markPaymentPaid(app.prisma, request, getScopedProfessionalId(request), request.params.id),
   );
 
   app.patch(

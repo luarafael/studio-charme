@@ -6,6 +6,7 @@ import {
   toZonedIsoDate,
   utcDateOnlyRange,
   type DashboardDto,
+  type DashboardReceivableAppointment,
   type IsoDate,
 } from '@studio-charme/contracts';
 import { toAppointmentDto } from './service.js';
@@ -67,7 +68,13 @@ export async function getDashboard(
         status: 'COMPLETED',
         completedAt: { gte: periodStart, lt: periodEnd },
       },
-      select: { id: true, totalPriceCents: true, clientId: true },
+      select: {
+        id: true,
+        totalPriceCents: true,
+        clientId: true,
+        completedAt: true,
+        client: { select: { name: true } },
+      },
     }),
     prisma.payment.aggregate({
       where: { professionalId, status: 'PAID', paidOn: dateRange },
@@ -112,6 +119,26 @@ export async function getDashboard(
     const paid = paidMap.get(item.id) ?? 0;
     return sum + Math.max(0, item.totalPriceCents - paid);
   }, 0);
+  const pendingLinked = await prisma.payment.findMany({
+    where: {
+      professionalId,
+      status: 'PENDING',
+      appointmentId: { in: completed.map((item) => item.id) },
+    },
+    select: { appointmentId: true },
+  });
+  const pendingLinkedIds = new Set(pendingLinked.map((row) => row.appointmentId));
+  const receivableAppointments: DashboardReceivableAppointment[] = completed
+    .map((item) => {
+      const paid = paidMap.get(item.id) ?? 0;
+      return {
+        appointmentId: item.id,
+        clientName: item.client.name,
+        remainingCents: Math.max(0, item.totalPriceCents - paid),
+        completedOn: item.completedAt ? toZonedIsoDate(item.completedAt) : period.from,
+      };
+    })
+    .filter((item) => item.remainingCents > 0 && !pendingLinkedIds.has(item.appointmentId));
   const registeredReceivable =
     (pendingPayments._sum.amountCents ?? 0) - (pendingPayments._sum.discountCents ?? 0);
   const pendingCents = leftoverCompleted + registeredReceivable;
@@ -138,5 +165,6 @@ export async function getDashboard(
     clientsServed,
     todayAppointments: periodAppointments.map(toAppointmentDto),
     upcomingAppointments: upcoming.map(toAppointmentDto),
+    receivableAppointments,
   };
 }
