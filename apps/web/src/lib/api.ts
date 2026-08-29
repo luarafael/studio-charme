@@ -1,6 +1,28 @@
 import { API_ERROR_MESSAGES, type ApiErrorCode } from '@studio-charme/contracts';
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3333';
+/** Aceita host sem protocolo (erro comum na Vercel) e remove `/api/v1` no final. */
+export function resolveApiUrl(raw: string | undefined): string {
+  const fallback = 'http://localhost:3333';
+  let value = raw?.trim() || fallback;
+
+  if (!/^https?:\/\//i.test(value)) {
+    value = `https://${value}`;
+  }
+
+  value = value.replace(/\/+$/, '').replace(/\/api\/v1$/i, '');
+
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return fallback;
+    }
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return fallback;
+  }
+}
+
+const API_URL = resolveApiUrl(import.meta.env.VITE_API_URL as string | undefined);
 
 let csrfToken: string | null = null;
 
@@ -39,7 +61,7 @@ type RequestOptions = {
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? 'GET';
-  const url = new URL(`/api/v1${path}`, API_URL);
+  const url = new URL(`/api/v1${path}`, `${API_URL}/`);
 
   if (options.search) {
     for (const [key, value] of Object.entries(options.search)) {
