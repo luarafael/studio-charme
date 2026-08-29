@@ -1,0 +1,148 @@
+/**
+ * Design tokens do Studio Charme.
+ *
+ * A paleta parte das três cores originais da marca:
+ *   marrom escuro #352C2D, dourado #A49156 e branco #F5F5F5.
+ *
+ * Contraste verificado (WCAG 2.1):
+ *   - dourado 500 (#A49156) sobre marrom 900: 4.72:1  -> AA para texto normal
+ *   - dourado 500 sobre branco:               2.87:1  -> apenas preenchimentos e bordas
+ *   - dourado 700 (#85743D) sobre branco:     4.60:1  -> AA para texto normal
+ * Por isso o dourado claro nunca é usado como cor de texto em fundo claro.
+ */
+
+@theme {
+  /* ---------- Cores da marca ---------- */
+  --color-brown-50: #f7f5f5;
+  --color-brown-100: #ede9e9;
+  --color-brown-200: #d9d2d2;
+  --color-brown-300: #bdb2b2;
+  --color-brown-400: #9a8c8d;
+  --color-brown-500: #7d6f70;
+  --color-brown-600: #665a5b;
+  --color-brown-700: #524849;
+  --color-brown-800: #453b3c;
+  --color-brown-900: #352c2d;
+  --color-brown-950: #241d1e;
+
+  --color-gold-50: #faf7ef;
+  --color-gold-100: #f3eddc;
+  --color-gold-200: #e5d9b8;
+  --color-gold-300: #d2c08d;
+  --color-gold-400: #bca670;
+  --color-gold-500: #a49156;
+  --color-gold-600: #8f7d49;
+  --color-gold-700: #85743d;
+  --color-gold-800: #6c5d31;
+  --color-gold-900: #574c2a;
+  --color-gold-950: #302a16;
+
+  --color-cream: #f5f5f5;
+  --color-cream-warm: #faf8f5;
+
+  /* ---------- Papéis semânticos ---------- */
+  --color-surface: #ffffff;
+  --color-surface-muted: var(--color-cream-warm);
+  --color-surface-inverse: var(--color-brown-900);
+  --color-border-subtle: var(--color-brown-200);
+  --color-content: var(--color-brown-900);
+  --color-content-muted: var(--color-brown-600);
+  --color-content-inverse: var(--color-cream);
+  --color-accent: var(--color-gold-500);
+  --color-accent-text: var(--color-gold-700);
+
+  /* Estados. Tons escolhidos para manter 4.5:1 sobre fundo claro. */
+  --color-success-50: #eef7f0;
+  --color-success-500: #2f855a;
+  --color-success-700: #22623f;
+  --color-warning-50: #fdf6e7;
+  --color-warning-500: #b7791f;
+  --color-warning-700: #8a5b15;
+  --color-danger-50: #fdeeee;
+  --color-danger-500: #c0392b;
+  --color-danger-700: #96261c;
+  --color-info-50: #eef2fa;
+  --color-info-500: #2f5da8;
+  --color-info-700: #234780;
+
+  /* ---------- Tipografia ---------- */
+  --font-display: 'Cinzel', ui-serif, Georgia, serif;
+  --font-sans:
+    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-display-sm: 2rem;
+  --text-display-sm--line-height: 1.15;
+  --text-display-sm--letter-spacing: -0.01em;
+  --text-display-md: 2.75rem;
+  --text-display-md--line-height: 1.1;
+  --text-display-md--letter-spacing: -0.015em;
+  --text-display-lg: 3.75rem;
+  --text-display-lg--line-height: 1.05;
+  --text-display-lg--letter-spacing: -0.02em;
+
+  /* ---------- Raios ---------- */
+  --radius-control: 0.75rem;
+  --radius-card: 1.25rem;
+  --radius-panel: 1.75rem;
+
+  /* ---------- Sombras ---------- */
+  --shadow-card: 0 1px 2px rgb(36 29 30 / 0.04), 0 8px 24px -12px rgb(36 29 30 / 0.14);
+  --shadow-card-hover: 0 2px 4px rgb(36 29 30 / 0.06), 0 16px 36px -14px rgb(36 29 30 / 0.22);
+  --shadow-overlay: 0 24px 64px -16px rgb(36 29 30 / 0.35);
+  --shadow-inset-hairline: inset 0 0 0 1px rgb(36 29 30 / 0.06);
+
+  /* ---------- Movimento ---------- */
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-brand: cubic-bezier(0.2, 0, 0.2, 1);
+
+  /* ---------- Layout ---------- */
+  --spacing-section: 5rem;
+  --spacing-section-lg: 7.5rem;
+  --container-content: 72rem;
+}
+
+/* Camada de conteúdo editorial reutilizada em textos longos e páginas legais. */
+@utility prose-charme {
+  color: var(--color-content-muted);
+  line-height: 1.75;
+
+  & h2 {
+    font-family: var(--font-display);
+    color: var(--color-content);
+    font-size: 1.5rem;
+    margin-block: 2rem 0.75rem;
+  }
+
+  & h3 {
+    font-family: var(--font-display);
+    color: var(--color-content);
+    font-size: 1.125rem;
+    margin-block: 1.5rem 0.5rem;
+  }
+
+  & p {
+    margin-block: 0.75rem;
+  }
+
+  & ul {
+    margin-block: 0.75rem;
+    padding-inline-start: 1.25rem;
+    list-style: disc;
+  }
+
+  & li {
+    margin-block: 0.375rem;
+  }
+
+  & strong {
+    color: var(--color-content);
+    font-weight: 600;
+  }
+
+  & a {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}

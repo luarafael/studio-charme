@@ -1,0 +1,179 @@
+{
+  "/assets/banho-de-lua.png": {
+    "width": 828,
+    "height": 1472,
+    "variants": [
+      {
+        "width": 400,
+        "height": 711,
+        "src": "/assets/optimized/banho-de-lua-400.webp"
+      },
+      {
+        "width": 800,
+        "height": 1422,
+        "src": "/assets/optimized/banho-de-lua-800.webp"
+      }
+    ]
+  },
+  "/assets/cabelo-loiro.png": {
+    "width": 1200,
+    "height": 1600,
+    "variants": [
+      {
+        "width": 400,
+        "height": 533,
+        "src": "/assets/optimized/cabelo-loiro-400.webp"
+      },
+      {
+        "width": 800,
+        "height": 1067,
+        "src": "/assets/optimized/cabelo-loiro-800.webp"
+      },
+      {
+        "width": 1200,
+        "height": 1600,
+        "src": "/assets/optimized/cabelo-loiro-1200.webp"
+      }
+    ]
+  },
+  "/assets/cliente-cilios.png": {
+    "width": 1200,
+    "height": 1600,
+    "variants": [
+      {
+        "width": 400,
+        "height": 533,
+        "src": "/assets/optimized/cliente-cilios-400.webp"
+      },
+      {
+        "width": 800,
+        "height": 1067,
+        "src": "/assets/optimized/cliente-cilios-800.webp"
+      },
+      {
+        "width": 1200,
+        "height": 1600,
+        "src": "/assets/optimized/cliente-cilios-1200.webp"
+      }
+    ]
+  },
+  "/assets/coloracao.png": {
+    "width": 960,
+    "height": 1280,
+    "variants": [
+      {
+        "width": 400,
+        "height": 533,
+        "src": "/assets/optimized/coloracao-400.webp"
+      },
+      {
+        "width": 800,
+        "height": 1067,
+        "src": "/assets/optimized/coloracao-800.webp"
+      }
+    ]
+  },
+  "/assets/insta1.jpg": {
+    "width": 640,
+    "height": 640,
+    "variants": [
+      {
+        "width": 400,
+        "height": 400,
+        "src": "/assets/optimized/insta1-400.webp"
+      }
+    ]
+  },
+  "/assets/insta2.jpg": {
+    "width": 640,
+    "height": 640,
+    "variants": [
+      {
+        "width": 400,
+        "height": 400,
+        "src": "/assets/optimized/insta2-400.webp"
+      }
+    ]
+  },
+  "/assets/insta3.jpg": {
+    "width": 640,
+    "height": 640,
+    "variants": [
+      {
+        "width": 400,
+        "height": 400,
+        "src": "/assets/optimized/insta3-400.webp"
+      }
+    ]
+  },
+  "/assets/insta4.jpg": {
+    "width": 640,
+    "height": 640,
+    "variants": [
+      {
+        "width": 400,
+        "height": 400,
+        "src": "/assets/optimized/insta4-400.webp"
+      }
+    ]
+  },
+  "/assets/olhos.png": {
+    "width": 828,
+    "height": 1472,
+    "variants": [
+      {
+        "width": 400,
+        "height": 711,
+        "src": "/assets/optimized/olhos-400.webp"
+      },
+      {
+        "width": 800,
+        "height": 1422,
+        "src": "/assets/optimized/olhos-800.webp"
+      }
+    ]
+  },
+  "/assets/studiocharme-Photoroom.png": {
+    "width": 639,
+    "height": 413,
+    "variants": [
+      {
+        "width": 400,
+        "height": 259,
+        "src": "/assets/optimized/studiocharme-Photoroom-400.webp"
+      }
+    ]
+  },
+  "/assets/studiocharme.png": {
+    "width": 639,
+    "height": 413,
+    "variants": [
+      {
+        "width": 400,
+        "height": 259,
+        "src": "/assets/optimized/studiocharme-400.webp"
+      }
+    ]
+  },
+  "/assets/unha.png": {
+    "width": 1200,
+    "height": 1600,
+    "variants": [
+      {
+        "width": 400,
+        "height": 533,
+        "src": "/assets/optimized/unha-400.webp"
+      },
+      {
+        "width": 800,
+        "height": 1067,
+        "src": "/assets/optimized/unha-800.webp"
+      },
+      {
+        "width": 1200,
+        "height": 1600,
+        "src": "/assets/optimized/unha-1200.webp"
+      }
+    ]
+  }
+}

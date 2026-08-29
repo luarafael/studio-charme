@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+/**
+ * Fontes auto-hospedadas: evitam requisição a terceiros, eliminam o salto de
+ * layout do carregamento externo e mantêm o site funcionando sem CDN.
+ * Só os subsets latinos são importados, já que o conteúdo é em português.
+ */
+@import '@fontsource/cinzel/latin-400.css';
+@import '@fontsource/cinzel/latin-600.css';
+@import '@fontsource/cinzel/latin-700.css';
+@import '@fontsource-variable/inter/wght.css';
+
+@import './styles/tokens.css';
+@import './styles/global.css';

@@ -1,0 +1,10 @@
+{
+  "extends": "@studio-charme/config/tsconfig/react.json",
+  "compilerOptions": {
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts", "eslint.config.js"]
+}
