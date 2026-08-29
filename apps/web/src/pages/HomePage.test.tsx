@@ -191,4 +191,20 @@ describe('HomePage — dados reais preservados', () => {
     // Marcadores explícitos em vez de valores fictícios.
     expect(screen.getAllByText('A confirmar').length).toBeGreaterThan(0);
   });
+
+  it('mostra o endereço, o horário e o mapa na seção de visita', () => {
+    renderHome();
+    expect(
+      screen.getByText(/Estamos em Fortaleza, no Ceará, na Rua Professor Leite Gondim, 1062/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Endereço' })).toBeInTheDocument();
+    expect(screen.getByText('Terça a sábado')).toBeInTheDocument();
+    expect(screen.getByText('9h às 18h')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Para atendimento fora deste horário, consulte a profissional/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTitle(/Mapa do Studio Charme na Rua Professor Leite Gondim/),
+    ).toBeInTheDocument();
+  });
 });

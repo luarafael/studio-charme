@@ -4,9 +4,8 @@
  * Os contatos, perfis e imagens abaixo foram inventariados do site publicado e
  * são REAIS: não altere sem confirmação das profissionais.
  *
- * Informações ainda não fornecidas (endereço, horários e preços) estão como
- * `null` e a interface mostra um marcador explícito. Nunca preencha com valores
- * fictícios: isso vira informação errada para a cliente.
+ * Preços ainda não informados ficam como `null` e a interface mostra um
+ * marcador explícito. Nunca preencha com valores fictícios.
  */
 
 export const PENDING_INFO_LABEL = 'A confirmar';
@@ -33,21 +32,22 @@ export const siteConfig = {
   primaryWhatsApp: '5585987963037',
 
   location: {
-    /** Endereço completo ainda não fornecido pelas profissionais. */
-    streetAddress: null as PendingOr<string>,
-    neighborhood: null as PendingOr<string>,
+    streetAddress: 'Rua Professor Leite Gondim, 1062',
+    neighborhood: 'Antônio Bezerra',
     city: 'Fortaleza',
     state: 'CE',
     postalCode: null as PendingOr<string>,
-    /** Link do Google Maps do local. */
-    mapsUrl: null as PendingOr<string>,
+    mapsUrl:
+      'https://www.google.com/maps/search/?api=1&query=Rua+Professor+Leite+Gondim,+1062,+Antonio+Bezerra,+Fortaleza,+CE',
+    mapsEmbedUrl:
+      'https://maps.google.com/maps?q=Rua%20Professor%20Leite%20Gondim%2C%201062%2C%20Antonio%20Bezerra%2C%20Fortaleza%2C%20CE&hl=pt-BR&z=16&output=embed',
   },
 
   /**
-   * Horário de funcionamento exibido no site. Os valores reais precisam ser
-   * confirmados; a agenda real vem do banco (business_hours) na área interna.
+   * Horário de funcionamento do espaço. A agenda real de cada profissional
+   * continua vindo do banco (business_hours) na área interna.
    */
-  openingHours: null as PendingOr<{ label: string; hours: string }[]>,
+  openingHours: [{ label: 'Terça a sábado', hours: '9h às 18h' }],
 } as const;
 
 export type ProfessionalSlug = 'livia' | 'cibele' | 'clarisse';

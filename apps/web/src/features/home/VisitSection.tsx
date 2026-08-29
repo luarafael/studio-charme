@@ -5,13 +5,7 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { PendingInfo } from '@/components/ui/PendingInfo';
 import { buttonClasses } from '@/components/ui/styles';
 
-/**
- * Endereço, horário e mapa.
- *
- * Endereço e horários ainda não foram informados pelas profissionais. Enquanto
- * isso, a seção exibe um marcador claro em vez de um dado inventado, que faria
- * a cliente ir ao lugar errado ou chegar com o studio fechado.
- */
+/** Endereço, horário e mapa do studio. */
 export function VisitSection() {
   const address = formatFullAddress();
   const { openingHours, location } = siteConfig;
@@ -21,7 +15,7 @@ export function VisitSection() {
       <SectionHeader
         eyebrow="Onde estamos"
         title="Venha nos visitar"
-        description="Estamos em Fortaleza, no Ceará. Confirme o endereço e o horário com a sua profissional antes de vir."
+        description="Estamos em Fortaleza, no Ceará, na Rua Professor Leite Gondim, 1062, Antônio Bezerra."
       />
 
       <div className="mt-12 grid gap-6 md:grid-cols-2">
@@ -70,17 +64,22 @@ export function VisitSection() {
               <h3 className="text-brown-900 text-lg">Horário de funcionamento</h3>
 
               {openingHours ? (
-                <dl className="mt-3 flex flex-col gap-2 text-sm">
-                  {openingHours.map((entry) => (
-                    <div
-                      key={entry.label}
-                      className="border-brown-50 flex justify-between gap-4 border-b pb-2 last:border-0"
-                    >
-                      <dt className="text-brown-600">{entry.label}</dt>
-                      <dd className="text-brown-900 font-medium">{entry.hours}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <>
+                  <dl className="mt-3 flex flex-col gap-2 text-sm">
+                    {openingHours.map((entry) => (
+                      <div
+                        key={entry.label}
+                        className="border-brown-50 flex justify-between gap-4 border-b pb-2 last:border-0"
+                      >
+                        <dt className="text-brown-600">{entry.label}</dt>
+                        <dd className="text-brown-900 font-medium">{entry.hours}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="text-brown-600 mt-3 text-sm">
+                    Para atendimento fora deste horário, consulte a profissional.
+                  </p>
+                </>
               ) : (
                 <div className="mt-2 flex flex-col items-start gap-2">
                   <PendingInfo label="Horários a confirmar" />
@@ -94,6 +93,19 @@ export function VisitSection() {
           </CardBody>
         </Card>
       </div>
+
+      {location.mapsEmbedUrl && (
+        <div className="border-brown-100 mt-6 overflow-hidden rounded-card border bg-white">
+          <iframe
+            title="Mapa do Studio Charme na Rua Professor Leite Gondim, 1062, Antônio Bezerra, Fortaleza"
+            src={location.mapsEmbedUrl}
+            className="h-72 w-full border-0 md:h-96"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
+        </div>
+      )}
     </Section>
   );
 }
