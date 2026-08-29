@@ -7,11 +7,23 @@ import { BookingSection } from './BookingSection';
 function mockEmptyCatalog() {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes('/api/v1/public/catalog')) {
         return new Response(JSON.stringify({ professionals: [] }), {
           status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (url.includes('/api/v1/auth/csrf')) {
+        return new Response(JSON.stringify({ csrfToken: 'test-csrf' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (url.includes('/api/v1/public/leads') && init?.method === 'POST') {
+        return new Response(JSON.stringify({ professionalName: 'Cibele' }), {
+          status: 201,
           headers: { 'Content-Type': 'application/json' },
         });
       }
@@ -125,6 +137,14 @@ describe('BookingSection', () => {
     expect(message).toContain('(85) 99123-4567');
     expect(message).toContain('Coloração');
     expect(message).toContain('Cibele');
+
+    const leadCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([request]) =>
+      String(request instanceof Request ? request.url : request).includes('/public/leads'),
+    );
+    expect(leadCall).toBeDefined();
+    const leadBody = JSON.parse(String((leadCall?.[1] as RequestInit | undefined)?.body));
+    expect(leadBody.professionalSlug).toBe('cibele');
+    expect(leadBody.clientName).toBe('Maria Silva');
   });
 
   it('usa o contato geral quando a cliente não tem preferência', async () => {

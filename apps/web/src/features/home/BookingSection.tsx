@@ -19,9 +19,9 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
-import { api } from '@/lib/api';
+import { api, ApiClientError, ensureCsrfToken } from '@/lib/api';
 import { LiveBookingForm } from '@/features/booking/LiveBookingForm';
-import type { PublicCatalogDto } from '@studio-charme/contracts';
+import type { PublicCatalogDto, PublicLeadResponse } from '@studio-charme/contracts';
 
 const NO_PREFERENCE = 'sem-preferencia';
 
@@ -50,6 +50,7 @@ type BookingRequestData = z.output<typeof bookingRequestSchema>;
  */
 export function BookingSection() {
   const [catalog, setCatalog] = useState<PublicCatalogDto | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,13 +99,45 @@ export function BookingSection() {
   });
 
   // O resolver já validou e normalizou os dados (o telefone chega em E.164).
-  const onSubmit = (parsed: BookingRequestData): void => {
+  const onSubmit = async (parsed: BookingRequestData): Promise<void> => {
+    setFormError(null);
     const service = showcaseServices.find((item) => item.slug === parsed.serviceSlug);
 
     const professional =
       parsed.professionalSlug === NO_PREFERENCE
         ? null
         : publicProfessionals.find((item) => item.slug === parsed.professionalSlug);
+
+    const destinationProfessional =
+      professional ??
+      publicProfessionals.find((item) => item.whatsApp === siteConfig.primaryWhatsApp) ??
+      publicProfessionals[0];
+    if (!destinationProfessional) {
+      setFormError('Não foi possível identificar a profissional.');
+      return;
+    }
+
+    try {
+      await ensureCsrfToken();
+      await api<PublicLeadResponse>('/public/leads', {
+        method: 'POST',
+        body: {
+          professionalSlug: destinationProfessional.slug,
+          clientName: parsed.clientName,
+          clientPhone: parsed.clientPhone,
+          notes: parsed.notes,
+          serviceName: service?.name,
+          consent: true,
+        },
+      });
+    } catch (error) {
+      setFormError(
+        error instanceof ApiClientError
+          ? error.message
+          : 'Não foi possível guardar seu contato. Tente de novo.',
+      );
+      return;
+    }
 
     const message = [
       `Olá! Gostaria de solicitar um agendamento no ${siteConfig.name}.`,
@@ -157,6 +190,8 @@ export function BookingSection() {
               </div>
             ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5" noValidate>
+              {formError && <Alert tone="danger">{formError}</Alert>}
+
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-start">
                 <Field label="Seu nome" required error={errors.clientName?.message}>
                   {(fieldProps) => (

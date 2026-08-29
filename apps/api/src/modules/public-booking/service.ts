@@ -1,8 +1,9 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   computeAppointmentWindow,
   isAppointmentInPast,
   type CreatePublicBookingBody,
+  type CreatePublicLeadBody,
   type IsoDate,
   type PublicBookingResponse,
   type PublicCatalogDto,
@@ -27,6 +28,48 @@ async function findPublicProfessional(prisma: PrismaClient, slug: string) {
   });
   if (!professional) throw notFound();
   return professional;
+}
+
+async function upsertPublicClient(
+  db: Prisma.TransactionClient | PrismaClient,
+  input: {
+    professionalId: string;
+    name: string;
+    phone: string;
+    notes?: string | null;
+  },
+): Promise<{ id: string }> {
+  const existing = await db.client.findUnique({
+    where: {
+      professionalId_phone: { professionalId: input.professionalId, phone: input.phone },
+    },
+    select: { id: true, notes: true, consentGivenAt: true },
+  });
+
+  if (existing) {
+    return db.client.update({
+      where: { id: existing.id },
+      data: {
+        name: input.name,
+        isActive: true,
+        consentGivenAt: existing.consentGivenAt ?? new Date(),
+        notes: existing.notes ?? input.notes ?? null,
+      },
+      select: { id: true },
+    });
+  }
+
+  return db.client.create({
+    data: {
+      professionalId: input.professionalId,
+      name: input.name,
+      phone: input.phone,
+      notes: input.notes,
+      consentGivenAt: new Date(),
+      isActive: true,
+    },
+    select: { id: true },
+  });
 }
 
 export async function getPublicCatalog(prisma: PrismaClient): Promise<PublicCatalogDto> {
@@ -132,32 +175,12 @@ export async function createPublicBooking(
 
   try {
     const created = await prisma.$transaction(async (tx) => {
-      const existing = await tx.client.findUnique({
-        where: {
-          professionalId_phone: { professionalId: professional.id, phone: body.clientPhone },
-        },
-        select: { id: true },
+      const client = await upsertPublicClient(tx, {
+        professionalId: professional.id,
+        name: body.clientName,
+        phone: body.clientPhone,
+        notes: body.notes?.trim() ? body.notes.trim() : null,
       });
-
-      const client =
-        existing ??
-        (await tx.client.create({
-          data: {
-            professionalId: professional.id,
-            name: body.clientName,
-            phone: body.clientPhone,
-            notes: body.notes,
-            consentGivenAt: new Date(),
-          },
-          select: { id: true },
-        }));
-
-      if (existing) {
-        await tx.client.update({
-          where: { id: client.id },
-          data: { name: body.clientName },
-        });
-      }
 
       return tx.appointment.create({
         data: {
@@ -212,4 +235,33 @@ export async function createPublicBooking(
     time: body.time,
     whatsapp: professional.whatsapp ?? '',
   };
+}
+
+export async function createPublicLead(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  body: CreatePublicLeadBody,
+): Promise<{ professionalName: string }> {
+  const professional = await findPublicProfessional(prisma, body.professionalSlug);
+  const noteParts = [
+    body.serviceName ? `Pedido pelo site: ${body.serviceName}.` : 'Cadastro pelo site.',
+    body.notes?.trim() ? body.notes.trim() : null,
+  ].filter((part): part is string => Boolean(part));
+
+  const client = await upsertPublicClient(prisma, {
+    professionalId: professional.id,
+    name: body.clientName,
+    phone: body.clientPhone,
+    notes: noteParts.join(' '),
+  });
+
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.CLIENT_CREATED,
+    entity: 'client',
+    entityId: client.id,
+    professionalId: professional.id,
+    metadata: { source: 'WEBSITE' },
+  });
+
+  return { professionalName: professional.name };
 }

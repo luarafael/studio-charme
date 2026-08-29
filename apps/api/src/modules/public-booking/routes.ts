@@ -1,12 +1,19 @@
 import {
   createPublicBookingBodySchema,
+  createPublicLeadBodySchema,
   publicAvailabilityQuerySchema,
   publicAvailabilitySchema,
   publicBookingResponseSchema,
   publicCatalogSchema,
+  publicLeadResponseSchema,
 } from '@studio-charme/contracts';
 import type { AppInstance } from '../../types/app.js';
-import { createPublicBooking, getPublicAvailability, getPublicCatalog } from './service.js';
+import {
+  createPublicBooking,
+  createPublicLead,
+  getPublicAvailability,
+  getPublicCatalog,
+} from './service.js';
 
 export async function publicBookingRoutes(app: AppInstance): Promise<void> {
   const publicLimit = { max: 20, timeWindow: '1 minute' };
@@ -41,6 +48,22 @@ export async function publicBookingRoutes(app: AppInstance): Promise<void> {
         request.query.date,
         request.query.serviceId,
       ),
+  );
+
+  app.post(
+    '/public/leads',
+    {
+      preHandler: app.requireCsrf,
+      config: { rateLimit: bookingLimit },
+      schema: {
+        body: createPublicLeadBodySchema,
+        response: { 201: publicLeadResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const created = await createPublicLead(app.prisma, request, request.body);
+      return reply.status(201).send(created);
+    },
   );
 
   app.post(

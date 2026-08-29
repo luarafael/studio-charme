@@ -26,3 +26,20 @@ export const publicBookingResponseSchema = z.object({
   whatsapp: z.string(),
 });
 export type PublicBookingResponse = z.infer<typeof publicBookingResponseSchema>;
+
+export const createPublicLeadBodySchema = z.object({
+  professionalSlug: z.string().trim().min(2).max(40),
+  clientName: z.string().trim().min(2, 'Informe seu nome.').max(120),
+  clientPhone: brazilianPhoneSchema,
+  notes: z.string().trim().max(500).optional(),
+  serviceName: z.string().trim().max(120).optional(),
+  consent: z.boolean().refine((value) => value, {
+    message: 'É necessário concordar com o uso dos seus dados para o contato.',
+  }),
+});
+export type CreatePublicLeadBody = z.infer<typeof createPublicLeadBodySchema>;
+
+export const publicLeadResponseSchema = z.object({
+  professionalName: z.string(),
+});
+export type PublicLeadResponse = z.infer<typeof publicLeadResponseSchema>;
