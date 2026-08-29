@@ -107,6 +107,31 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...baseEnv, STORAGE_DRIVER: 's3' })).toThrow(/STORAGE_BUCKET/);
   });
 
+  it('ignora NODE_ENV vazio e aplica o padrão de desenvolvimento', () => {
+    const env = loadEnv({ ...baseEnv, NODE_ENV: '' });
+    expect(env.NODE_ENV).toBe('development');
+  });
+
+  it('aceita NODE_ENV em maiúsculas e o alias prod', () => {
+    const productionBase = {
+      ...baseEnv,
+      WEB_ORIGINS: 'https://studiocharme.com.br',
+      WEB_PUBLIC_URL: 'https://studiocharme.com.br',
+      COOKIE_SECURE: 'true',
+    };
+    expect(loadEnv({ ...productionBase, NODE_ENV: 'Production' }).NODE_ENV).toBe('production');
+    expect(loadEnv({ ...productionBase, NODE_ENV: 'prod' }).NODE_ENV).toBe('production');
+  });
+
+  it('trata o ambiente do Railway sem as variáveis obrigatórias ainda como produção', () => {
+    expect(() =>
+      loadEnv({
+        NODE_ENV: 'studio-charme',
+        RAILWAY_ENVIRONMENT_ID: 'abc',
+      }),
+    ).toThrow(/DATABASE_URL/);
+  });
+
   it('não expõe o valor dos segredos na mensagem de erro', () => {
     const secret = 'segredo-super-sensivel-que-nao-deve-vazar';
     try {

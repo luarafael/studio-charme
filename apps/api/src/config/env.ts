@@ -144,12 +144,52 @@ const envSchema = z
     }
   });
 
+const NODE_ENV_ALIASES: Record<string, 'development' | 'test' | 'production'> = {
+  production: 'production',
+  prod: 'production',
+  prd: 'production',
+  development: 'development',
+  dev: 'development',
+  test: 'test',
+  testing: 'test',
+};
+
+/**
+ * Painéis de deploy às vezes enviam string vazia, maiúsculas ou o nome do
+ * ambiente (`prod`, `studio-charme`) no lugar de `production`.
+ */
+export function normalizeProcessEnv(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const next: NodeJS.ProcessEnv = { ...source };
+
+  for (const [key, value] of Object.entries(next)) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      delete next[key];
+    } else {
+      next[key] = trimmed;
+    }
+  }
+
+  const raw = (next.NODE_ENV ?? '').toLowerCase();
+  const aliased = NODE_ENV_ALIASES[raw];
+  const onRailway = Boolean(next.RAILWAY_ENVIRONMENT || next.RAILWAY_ENVIRONMENT_ID);
+
+  if (aliased) {
+    next.NODE_ENV = aliased;
+  } else if (onRailway) {
+    next.NODE_ENV = 'production';
+  }
+
+  return next;
+}
+
 export type Env = z.infer<typeof envSchema>;
 
 let cachedEnv: Env | null = null;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchema.safeParse(source);
+  const result = envSchema.safeParse(normalizeProcessEnv(source));
 
   if (!result.success) {
     const details = result.error.issues

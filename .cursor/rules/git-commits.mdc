@@ -1,0 +1,10 @@
+---
+description: Commits sem Co-authored-by do Cursor
+alwaysApply: true
+---
+
+# Commits
+
+- Conventional Commits em português.
+- Nunca inclua `Co-authored-by`, `Signed-off-by` do Cursor, nem qualquer trailer de coautoria na mensagem.
+- O autor do commit é só a conta Git local (Luã Rafael). Não atribua o Cursor como coautor.
