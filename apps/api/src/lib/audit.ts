@@ -27,6 +27,7 @@ export const AUDIT_ACTIONS = {
 
   APPOINTMENT_CREATED: 'appointment.created',
   APPOINTMENT_UPDATED: 'appointment.updated',
+  APPOINTMENT_DELETED: 'appointment.deleted',
   APPOINTMENT_STATUS_CHANGED: 'appointment.status_changed',
   APPOINTMENT_CANCELLED: 'appointment.cancelled',
 

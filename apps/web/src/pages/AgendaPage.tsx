@@ -10,7 +10,7 @@ import {
   type AppointmentStatus,
   type IsoDate,
 } from '@studio-charme/contracts';
-import { CalendarPlus, ChevronLeft, ChevronRight, History, MessageCircle } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight, History, MessageCircle, Pencil, Trash2 } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -55,6 +55,8 @@ export default function AgendaPage() {
   const dateFromQuery = isoDateSchema.safeParse(searchParams.get('date'));
   const [date, setDate] = useState<IsoDate>(dateFromQuery.success ? dateFromQuery.data : today);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editing, setEditing] = useState<AppointmentDto | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AppointmentDto | null>(null);
   const [cancelTarget, setCancelTarget] = useState<AppointmentDto | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [payTarget, setPayTarget] = useState<AppointmentDto | null>(null);
@@ -71,6 +73,17 @@ export default function AgendaPage() {
       api<{ items: AppointmentDto[] }>('/appointments', {
         search: { from: date, to: date },
       }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/appointments/${id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setDeleteTarget(null);
+      setDetailTarget(null);
+      showToast({ tone: 'success', title: 'Atendimento excluído' });
+    },
   });
 
   const statusMutation = useMutation({
@@ -150,7 +163,10 @@ export default function AgendaPage() {
           </Button>
           <Button
             leadingIcon={<CalendarPlus className="size-4" aria-hidden="true" />}
-            onClick={() => setComposerOpen(true)}
+            onClick={() => {
+              setEditing(null);
+              setComposerOpen(true);
+            }}
           >
             Novo atendimento
           </Button>
@@ -201,7 +217,13 @@ export default function AgendaPage() {
               title="Nenhum horário neste dia"
               description="Marque um atendimento ou escolha outro dia no calendário."
               action={
-                <Button variant="secondary" onClick={() => setComposerOpen(true)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setEditing(null);
+                    setComposerOpen(true);
+                  }}
+                >
                   Marcar agora
                 </Button>
               }
@@ -256,6 +278,25 @@ export default function AgendaPage() {
                               Receber
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            leadingIcon={<Pencil className="size-3.5" aria-hidden="true" />}
+                            onClick={() => {
+                              setEditing(item);
+                              setComposerOpen(true);
+                            }}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            leadingIcon={<Trash2 className="size-3.5" aria-hidden="true" />}
+                            onClick={() => setDeleteTarget(item)}
+                          >
+                            Excluir
+                          </Button>
                         </div>
                       </div>
                     </CardBody>
@@ -274,10 +315,14 @@ export default function AgendaPage() {
       />
 
       <AppointmentComposer
-        key={composerOpen ? 'open' : 'closed'}
+        key={composerOpen ? (editing?.id ?? 'new') : 'closed'}
         open={composerOpen}
-        onClose={() => setComposerOpen(false)}
+        onClose={() => {
+          setComposerOpen(false);
+          setEditing(null);
+        }}
         date={date}
+        appointment={editing ?? undefined}
         onSaved={setDate}
       />
 
@@ -287,6 +332,42 @@ export default function AgendaPage() {
         onClose={() => setPayTarget(null)}
         appointment={payTarget ?? undefined}
       />
+
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Excluir atendimento?"
+        description="O horário some da agenda e do histórico. Esta ação não se desfaz."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+              Voltar
+            </Button>
+            <Button
+              variant="danger"
+              isLoading={deleteMutation.isPending}
+              onClick={() => {
+                if (!deleteTarget) return;
+                void deleteMutation.mutateAsync(deleteTarget.id).catch((error: unknown) => {
+                  showToast({
+                    tone: 'danger',
+                    title: 'Não foi possível excluir',
+                    description: error instanceof ApiClientError ? error.message : 'Tente novamente.',
+                  });
+                });
+              }}
+            >
+              Excluir
+            </Button>
+          </>
+        }
+      >
+        <p className="text-brown-700 text-sm">
+          {deleteTarget
+            ? `${deleteTarget.client.name} · ${formatTime(deleteTarget.startsAt)} – ${formatTime(deleteTarget.endsAt)}.`
+            : null}
+        </p>
+      </Modal>
 
       <Modal
         open={cancelTarget !== null}

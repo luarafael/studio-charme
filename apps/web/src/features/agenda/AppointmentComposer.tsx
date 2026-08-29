@@ -13,6 +13,7 @@ import {
   timeOfDaySchema,
   uuidSchema,
   toZonedIsoDate,
+  toZonedTimeOfDay,
   type AppointmentDto,
   type ClientDto,
   type IsoDate,
@@ -35,6 +36,7 @@ type AppointmentComposerProps = {
   onClose: () => void;
   /** Dia sugerido ao abrir; a profissional pode trocar no calendário do formulário. */
   date: IsoDate;
+  appointment?: AppointmentDto;
   onSaved?: (date: IsoDate) => void;
 };
 
@@ -93,12 +95,23 @@ type ComposerInput = z.infer<typeof composerSchema>;
 
 const EMPTY_SERVICE_IDS: string[] = [];
 
-export function AppointmentComposer({ open, onClose, date, onSaved }: AppointmentComposerProps) {
+export function AppointmentComposer({
+  open,
+  onClose,
+  date,
+  appointment,
+  onSaved,
+}: AppointmentComposerProps) {
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
   const [phoneMask, setPhoneMask] = useState('');
   const today = toZonedIsoDate(new Date());
-  const initialDate = date < today ? today : date;
+  const editing = appointment !== undefined;
+  const initialDate = editing
+    ? toZonedIsoDate(new Date(appointment.startsAt))
+    : date < today
+      ? today
+      : date;
 
   const clients = useQuery({
     queryKey: ['clients'],
@@ -115,9 +128,10 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
     defaultValues: {
       clientMode: 'existing',
       date: initialDate,
-      time: '09:00',
-      serviceIds: [],
-      notes: '',
+      time: editing ? toZonedTimeOfDay(new Date(appointment.startsAt)) : '09:00',
+      serviceIds: editing ? appointment.services.map((service) => service.serviceId) : [],
+      notes: editing ? (appointment.notes ?? '') : '',
+      clientId: editing ? appointment.client.id : '',
       consentGiven: false,
     },
   });
@@ -150,9 +164,9 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
   const busyThatDay = useMemo(
     () =>
       (dayAppointments.data?.items ?? [])
-        .filter((item) => occupiesSchedule(item.status))
+        .filter((item) => occupiesSchedule(item.status) && item.id !== appointment?.id)
         .map((item) => `${formatTime(item.startsAt)} ${item.client.name}`),
-    [dayAppointments.data?.items],
+    [appointment?.id, dayAppointments.data?.items],
   );
 
   const createClient = useMutation({
@@ -183,13 +197,21 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
         await queryClient.invalidateQueries({ queryKey: ['clients'] });
       }
 
-      await createAppointment.mutateAsync({
+      const payload = {
         clientId: clientId!,
         serviceIds: values.serviceIds,
         date: values.date,
         time: values.time,
         notes: values.notes,
-      });
+      };
+      if (editing) {
+        await api<AppointmentDto>(`/appointments/${appointment.id}`, {
+          method: 'PATCH',
+          body: payload,
+        });
+      } else {
+        await createAppointment.mutateAsync(payload);
+      }
       await queryClient.invalidateQueries({ queryKey: ['appointments'] });
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       form.reset();
@@ -213,8 +235,12 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
     <Modal
       open={open}
       onClose={onClose}
-      title="Novo atendimento"
-      description="Pode ser qualquer dia e qualquer horário. Só não dá para marcar em cima de outro atendimento seu."
+      title={editing ? 'Editar atendimento' : 'Novo atendimento'}
+      description={
+        editing
+          ? 'Altere cliente, serviço, dia ou horário. Só não dá para marcar em cima de outro atendimento seu.'
+          : 'Pode ser qualquer dia e qualquer horário. Só não dá para marcar em cima de outro atendimento seu.'
+      }
       size="lg"
       footer={
         <>
@@ -373,7 +399,7 @@ export function AppointmentComposer({ open, onClose, date, onSaved }: Appointmen
             <DatePicker
               label="Escolher o dia do atendimento"
               value={selectedDate}
-              minDate={today}
+              minDate={editing ? undefined : today}
               onChange={(next) => {
                 form.setValue('date', next, { shouldValidate: true, shouldDirty: true });
               }}

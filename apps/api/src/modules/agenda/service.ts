@@ -11,6 +11,7 @@ import {
   type AppointmentStatus,
   type CreateAppointmentBody,
   type CreateServiceBody,
+  type UpdateAppointmentBody,
   type UpdateClientBody,
   type UpdateServiceBody,
 } from '@studio-charme/contracts';
@@ -231,6 +232,104 @@ export async function createAppointment(
     }
     throw error;
   }
+}
+
+export async function updateAppointment(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+  body: UpdateAppointmentBody,
+): Promise<AppointmentDto> {
+  const current = await prisma.appointment.findFirst({
+    where: { id, professionalId },
+    select: { id: true },
+  });
+  if (!current) throw notFound();
+
+  const client = await prisma.client.findFirst({
+    where: { id: body.clientId, professionalId, isActive: true },
+    select: { id: true },
+  });
+  if (!client) throw notFound();
+
+  const services = await prisma.service.findMany({
+    where: { id: { in: body.serviceIds }, professionalId, isActive: true },
+  });
+  if (services.length !== body.serviceIds.length) {
+    throw notFound();
+  }
+
+  const durationMinutes = services.reduce((sum, service) => sum + service.durationMinutes, 0);
+  const bufferAfterMinutes = Math.max(...services.map((service) => service.bufferAfterMinutes));
+  const totalPriceCents = services.reduce((sum, service) => sum + service.priceCents, 0);
+  const window = computeAppointmentWindow({
+    date: body.date,
+    time: body.time,
+    durationMinutes,
+    bufferAfterMinutes,
+  });
+
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.appointmentService.deleteMany({ where: { appointmentId: current.id } });
+      return tx.appointment.update({
+        where: { id: current.id },
+        data: {
+          clientId: client.id,
+          startsAt: window.startsAt,
+          endsAt: window.endsAt,
+          blockedUntil: window.blockedUntil,
+          totalPriceCents,
+          notes: body.notes?.trim() ? body.notes.trim() : null,
+          services: {
+            create: services.map((service) => ({
+              serviceId: service.id,
+              nameSnapshot: service.name,
+              durationMinutes: service.durationMinutes,
+              priceCents: service.priceCents,
+            })),
+          },
+        },
+        include: appointmentInclude,
+      });
+    });
+
+    await recordAudit(prisma, request, {
+      action: AUDIT_ACTIONS.APPOINTMENT_UPDATED,
+      entity: 'appointment',
+      entityId: updated.id,
+      professionalId,
+    });
+
+    return toAppointmentDto(updated);
+  } catch (error) {
+    if (isAppointmentOverlapError(error)) {
+      throw scheduleConflict('Já existe um atendimento neste horário.');
+    }
+    throw error;
+  }
+}
+
+export async function deleteAppointment(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+): Promise<void> {
+  const current = await prisma.appointment.findFirst({
+    where: { id, professionalId },
+    select: { id: true },
+  });
+  if (!current) throw notFound();
+
+  await prisma.appointment.delete({ where: { id: current.id } });
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.APPOINTMENT_DELETED,
+    entity: 'appointment',
+    entityId: current.id,
+    professionalId,
+  });
 }
 
 export async function updateAppointmentStatus(

@@ -83,6 +83,15 @@ export const updateAppointmentStatusBodySchema = z.object({
   cancelReason: z.string().trim().max(200).optional(),
 });
 
+export const updateAppointmentBodySchema = z.object({
+  clientId: uuidSchema,
+  serviceIds: z.array(uuidSchema).min(1, 'Selecione ao menos um serviço.'),
+  date: isoDateSchema,
+  time: timeOfDaySchema,
+  notes: z.string().trim().max(2000).optional(),
+});
+export type UpdateAppointmentBody = z.infer<typeof updateAppointmentBodySchema>;
+
 export const createClientBodySchema = z.object({
   name: z.string().trim().min(2, 'Informe o nome da cliente.').max(160),
   phone: brazilianPhoneSchema,

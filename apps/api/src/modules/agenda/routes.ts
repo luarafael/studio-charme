@@ -13,6 +13,7 @@ import {
   listAppointmentsQuerySchema,
   serviceSchema,
   startOfZonedDay,
+  updateAppointmentBodySchema,
   updateAppointmentStatusBodySchema,
   updateClientBodySchema,
   updateServiceBodySchema,
@@ -23,6 +24,7 @@ import { getScopedProfessionalId } from '../../lib/scope.js';
 import {
   createAppointment,
   createClient,
+  deleteAppointment,
   createService,
   deleteClient,
   deleteService,
@@ -33,6 +35,7 @@ import {
   listServices,
   toClientDto,
   toServiceDto,
+  updateAppointment,
   updateAppointmentStatus,
   updateClient,
   updateService,
@@ -129,6 +132,43 @@ export async function agendaRoutes(app: AppInstance): Promise<void> {
         request.body,
       );
       return reply.status(201).send(created);
+    },
+  );
+
+  app.patch(
+    '/appointments/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        body: updateAppointmentBodySchema,
+        response: { 200: appointmentSchema },
+      },
+    },
+    async (request) =>
+      updateAppointment(
+        app.prisma,
+        request,
+        getScopedProfessionalId(request),
+        request.params.id,
+        request.body,
+      ),
+  );
+
+  app.delete(
+    '/appointments/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: { params: z.object({ id: uuidSchema }) },
+    },
+    async (request, reply) => {
+      await deleteAppointment(
+        app.prisma,
+        request,
+        getScopedProfessionalId(request),
+        request.params.id,
+      );
+      return reply.status(204).send();
     },
   );
 
