@@ -1,4 +1,4 @@
-import type { Appointment, AppointmentService, Client } from '@prisma/client';
+import type { Appointment, AppointmentService, Client, Service } from '@prisma/client';
 import {
   appointmentSourceSchema,
   canTransitionAppointmentStatus,
@@ -7,6 +7,9 @@ import {
   type AppointmentDto,
   type AppointmentStatus,
   type CreateAppointmentBody,
+  type CreateServiceBody,
+  type UpdateClientBody,
+  type UpdateServiceBody,
 } from '@studio-charme/contracts';
 import { AppError, notFound, scheduleConflict } from '../../lib/errors.js';
 import { isAppointmentOverlapError, isPrismaError, PRISMA_ERROR } from '../../lib/prisma.js';
@@ -243,22 +246,47 @@ export async function listClients(
   });
 }
 
+export function toClientDto(item: Client) {
+  return {
+    id: item.id,
+    name: item.name,
+    phone: item.phone,
+    notes: item.notes,
+    consentGivenAt: item.consentGivenAt?.toISOString() ?? null,
+    isActive: item.isActive,
+  };
+}
+
+async function findOwnedActiveClient(
+  prisma: PrismaClient,
+  professionalId: string,
+  id: string,
+): Promise<Client> {
+  const record = await prisma.client.findFirst({
+    where: { id, professionalId, isActive: true },
+  });
+  if (!record) throw notFound();
+  return record;
+}
+
 export async function createClient(
   prisma: PrismaClient,
   request: FastifyRequest,
   professionalId: string,
   body: { name: string; phone: string; notes?: string; consentGiven: boolean },
 ) {
+  const notes = body.notes?.trim() ? body.notes.trim() : null;
+  const data = {
+    professionalId,
+    name: body.name,
+    phone: body.phone,
+    notes,
+    consentGivenAt: body.consentGiven ? new Date() : null,
+    isActive: true,
+  };
+
   try {
-    const created = await prisma.client.create({
-      data: {
-        professionalId,
-        name: body.name,
-        phone: body.phone,
-        notes: body.notes,
-        consentGivenAt: body.consentGiven ? new Date() : null,
-      },
-    });
+    const created = await prisma.client.create({ data });
 
     await recordAudit(prisma, request, {
       action: AUDIT_ACTIONS.CLIENT_CREATED,
@@ -270,12 +298,89 @@ export async function createClient(
     return created;
   } catch (error) {
     if (isPrismaError(error, PRISMA_ERROR.UNIQUE_VIOLATION)) {
+      const existing = await prisma.client.findFirst({
+        where: { professionalId, phone: body.phone },
+      });
+      if (existing && !existing.isActive) {
+        const restored = await prisma.client.update({
+          where: { id: existing.id },
+          data: {
+            name: body.name,
+            notes,
+            isActive: true,
+            consentGivenAt: body.consentGiven ? new Date() : existing.consentGivenAt,
+          },
+        });
+        await recordAudit(prisma, request, {
+          action: AUDIT_ACTIONS.CLIENT_UPDATED,
+          entity: 'client',
+          entityId: restored.id,
+          professionalId,
+          metadata: { restored: true },
+        });
+        return restored;
+      }
       throw new AppError('DUPLICATE_RESOURCE', 409, {
         message: 'Você já tem uma cliente com este WhatsApp.',
       });
     }
     throw error;
   }
+}
+
+export async function updateClient(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+  body: UpdateClientBody,
+) {
+  await findOwnedActiveClient(prisma, professionalId, id);
+  const notes = body.notes === undefined ? undefined : body.notes.trim() ? body.notes.trim() : null;
+
+  try {
+    const updated = await prisma.client.update({
+      where: { id },
+      data: {
+        name: body.name,
+        phone: body.phone,
+        ...(notes === undefined ? {} : { notes }),
+      },
+    });
+    await recordAudit(prisma, request, {
+      action: AUDIT_ACTIONS.CLIENT_UPDATED,
+      entity: 'client',
+      entityId: updated.id,
+      professionalId,
+    });
+    return updated;
+  } catch (error) {
+    if (isPrismaError(error, PRISMA_ERROR.UNIQUE_VIOLATION)) {
+      throw new AppError('DUPLICATE_RESOURCE', 409, {
+        message: 'Você já tem uma cliente com este WhatsApp.',
+      });
+    }
+    throw error;
+  }
+}
+
+export async function deleteClient(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+): Promise<void> {
+  await findOwnedActiveClient(prisma, professionalId, id);
+  await prisma.client.update({
+    where: { id },
+    data: { isActive: false },
+  });
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.CLIENT_DELETED,
+    entity: 'client',
+    entityId: id,
+    professionalId,
+  });
 }
 
 export async function listServices(prisma: PrismaClient, professionalId: string) {
@@ -285,22 +390,48 @@ export async function listServices(prisma: PrismaClient, professionalId: string)
   });
 }
 
+export function toServiceDto(item: Service) {
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    durationMinutes: item.durationMinutes,
+    priceCents: item.priceCents,
+    bufferAfterMinutes: item.bufferAfterMinutes,
+    isActive: item.isActive,
+  };
+}
+
+async function findOwnedActiveService(
+  prisma: PrismaClient,
+  professionalId: string,
+  id: string,
+): Promise<Service> {
+  const record = await prisma.service.findFirst({
+    where: { id, professionalId, isActive: true },
+  });
+  if (!record) throw notFound();
+  return record;
+}
+
 export async function createService(
   prisma: PrismaClient,
   request: FastifyRequest,
   professionalId: string,
-  body: {
-    name: string;
-    category: string;
-    durationMinutes: number;
-    priceCents: number;
-    bufferAfterMinutes: number;
-  },
+  body: CreateServiceBody,
 ) {
+  const payload = {
+    professionalId,
+    name: body.name,
+    category: body.category,
+    durationMinutes: body.durationMinutes,
+    priceCents: body.priceCents,
+    bufferAfterMinutes: body.bufferAfterMinutes,
+    isActive: true,
+  };
+
   try {
-    const created = await prisma.service.create({
-      data: { professionalId, ...body },
-    });
+    const created = await prisma.service.create({ data: payload });
     await recordAudit(prisma, request, {
       action: AUDIT_ACTIONS.SERVICE_CREATED,
       entity: 'service',
@@ -310,10 +441,89 @@ export async function createService(
     return created;
   } catch (error) {
     if (isPrismaError(error, PRISMA_ERROR.UNIQUE_VIOLATION)) {
+      const existing = await prisma.service.findFirst({
+        where: { professionalId, name: body.name },
+      });
+      if (existing && !existing.isActive) {
+        const restored = await prisma.service.update({
+          where: { id: existing.id },
+          data: {
+            category: body.category,
+            durationMinutes: body.durationMinutes,
+            priceCents: body.priceCents,
+            bufferAfterMinutes: body.bufferAfterMinutes,
+            isActive: true,
+          },
+        });
+        await recordAudit(prisma, request, {
+          action: AUDIT_ACTIONS.SERVICE_UPDATED,
+          entity: 'service',
+          entityId: restored.id,
+          professionalId,
+          metadata: { restored: true },
+        });
+        return restored;
+      }
       throw new AppError('DUPLICATE_RESOURCE', 409, {
         message: 'Você já tem um serviço com este nome.',
       });
     }
     throw error;
   }
+}
+
+export async function updateService(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+  body: UpdateServiceBody,
+) {
+  await findOwnedActiveService(prisma, professionalId, id);
+
+  try {
+    const updated = await prisma.service.update({
+      where: { id },
+      data: {
+        name: body.name,
+        category: body.category,
+        durationMinutes: body.durationMinutes,
+        priceCents: body.priceCents,
+        bufferAfterMinutes: body.bufferAfterMinutes,
+      },
+    });
+    await recordAudit(prisma, request, {
+      action: AUDIT_ACTIONS.SERVICE_UPDATED,
+      entity: 'service',
+      entityId: updated.id,
+      professionalId,
+    });
+    return updated;
+  } catch (error) {
+    if (isPrismaError(error, PRISMA_ERROR.UNIQUE_VIOLATION)) {
+      throw new AppError('DUPLICATE_RESOURCE', 409, {
+        message: 'Você já tem um serviço com este nome.',
+      });
+    }
+    throw error;
+  }
+}
+
+export async function deleteService(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+): Promise<void> {
+  await findOwnedActiveService(prisma, professionalId, id);
+  await prisma.service.update({
+    where: { id },
+    data: { isActive: false },
+  });
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.SERVICE_DELETED,
+    entity: 'service',
+    entityId: id,
+    professionalId,
+  });
 }

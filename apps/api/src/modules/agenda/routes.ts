@@ -1,13 +1,17 @@
 import { z } from 'zod';
 import {
+  clientSchema,
   createAppointmentBodySchema,
   createClientBodySchema,
   createServiceBodySchema,
   dashboardSchema,
   endOfZonedDay,
   listAppointmentsQuerySchema,
+  serviceSchema,
   startOfZonedDay,
   updateAppointmentStatusBodySchema,
+  updateClientBodySchema,
+  updateServiceBodySchema,
   uuidSchema,
 } from '@studio-charme/contracts';
 import type { AppInstance } from '../../types/app.js';
@@ -16,11 +20,17 @@ import {
   createAppointment,
   createClient,
   createService,
+  deleteClient,
+  deleteService,
   getAppointment,
   listAppointments,
   listClients,
   listServices,
+  toClientDto,
+  toServiceDto,
   updateAppointmentStatus,
+  updateClient,
+  updateService,
 } from './service.js';
 import { getDashboard } from './dashboard.js';
 
@@ -111,14 +121,7 @@ export async function agendaRoutes(app: AppInstance): Promise<void> {
         request.query.search,
       );
       return {
-        items: items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          phone: item.phone,
-          notes: item.notes,
-          consentGivenAt: item.consentGivenAt?.toISOString() ?? null,
-          isActive: item.isActive,
-        })),
+        items: items.map(toClientDto),
       };
     },
   );
@@ -136,29 +139,48 @@ export async function agendaRoutes(app: AppInstance): Promise<void> {
         getScopedProfessionalId(request),
         request.body,
       );
-      return reply.status(201).send({
-        id: created.id,
-        name: created.name,
-        phone: created.phone,
-        notes: created.notes,
-        consentGivenAt: created.consentGivenAt?.toISOString() ?? null,
-        isActive: created.isActive,
-      });
+      return reply.status(201).send(toClientDto(created));
+    },
+  );
+
+  app.patch(
+    '/clients/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        body: updateClientBodySchema,
+        response: { 200: clientSchema },
+      },
+    },
+    async (request) =>
+      toClientDto(
+        await updateClient(
+          app.prisma,
+          request,
+          getScopedProfessionalId(request),
+          request.params.id,
+          request.body,
+        ),
+      ),
+  );
+
+  app.delete(
+    '/clients/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: { params: z.object({ id: uuidSchema }) },
+    },
+    async (request, reply) => {
+      await deleteClient(app.prisma, request, getScopedProfessionalId(request), request.params.id);
+      return reply.status(204).send();
     },
   );
 
   app.get('/services', { preHandler: app.requireAuth }, async (request) => {
     const items = await listServices(app.prisma, getScopedProfessionalId(request));
     return {
-      items: items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        category: item.category,
-        durationMinutes: item.durationMinutes,
-        priceCents: item.priceCents,
-        bufferAfterMinutes: item.bufferAfterMinutes,
-        isActive: item.isActive,
-      })),
+      items: items.map(toServiceDto),
     };
   });
 
@@ -175,15 +197,41 @@ export async function agendaRoutes(app: AppInstance): Promise<void> {
         getScopedProfessionalId(request),
         request.body,
       );
-      return reply.status(201).send({
-        id: created.id,
-        name: created.name,
-        category: created.category,
-        durationMinutes: created.durationMinutes,
-        priceCents: created.priceCents,
-        bufferAfterMinutes: created.bufferAfterMinutes,
-        isActive: created.isActive,
-      });
+      return reply.status(201).send(toServiceDto(created));
+    },
+  );
+
+  app.patch(
+    '/services/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        body: updateServiceBodySchema,
+        response: { 200: serviceSchema },
+      },
+    },
+    async (request) =>
+      toServiceDto(
+        await updateService(
+          app.prisma,
+          request,
+          getScopedProfessionalId(request),
+          request.params.id,
+          request.body,
+        ),
+      ),
+  );
+
+  app.delete(
+    '/services/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: { params: z.object({ id: uuidSchema }) },
+    },
+    async (request, reply) => {
+      await deleteService(app.prisma, request, getScopedProfessionalId(request), request.params.id);
+      return reply.status(204).send();
     },
   );
 }

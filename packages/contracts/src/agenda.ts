@@ -64,6 +64,13 @@ export const createClientBodySchema = z.object({
 });
 export type CreateClientBody = z.infer<typeof createClientBodySchema>;
 
+export const updateClientBodySchema = z.object({
+  name: z.string().trim().min(2, 'Informe o nome da cliente.').max(160),
+  phone: brazilianPhoneSchema,
+  notes: z.string().trim().max(4000).optional(),
+});
+export type UpdateClientBody = z.infer<typeof updateClientBodySchema>;
+
 export const clientSchema = z.object({
   id: uuidSchema,
   name: z.string(),
@@ -85,6 +92,10 @@ export const createServiceBodySchema = z.object({
   priceCents: z.number().int().min(0),
   bufferAfterMinutes: z.number().int().min(0).max(120).default(0),
 });
+export type CreateServiceBody = z.infer<typeof createServiceBodySchema>;
+
+export const updateServiceBodySchema = createServiceBodySchema;
+export type UpdateServiceBody = CreateServiceBody;
 
 export const serviceSchema = z.object({
   id: uuidSchema,

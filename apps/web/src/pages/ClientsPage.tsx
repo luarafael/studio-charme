@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
   createClientBodySchema,
-  createServiceBodySchema,
   formatBrazilianPhone,
   formatCents,
   maskBrazilianPhone,
@@ -13,7 +12,7 @@ import {
   type ClientDto,
   type ServiceDto,
 } from '@studio-charme/contracts';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -58,6 +57,23 @@ const serviceFormSchema = z
   });
 
 type ServiceFormInput = z.input<typeof serviceFormSchema>;
+type ServiceFormOutput = z.output<typeof serviceFormSchema>;
+
+const SERVICE_DEFAULTS: ServiceFormInput = {
+  name: '',
+  category: 'Geral',
+  durationMinutes: 60,
+  bufferAfterMinutes: 0,
+  priceLabel: '',
+};
+
+function centsToPriceLabel(cents: number): string {
+  return formatCents(cents).replace(/[^\d,]/g, '');
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof ApiClientError ? error.message : 'Confira os dados e tente de novo.';
+}
 
 export default function ClientsPage() {
   useDocumentMeta({
@@ -67,8 +83,12 @@ export default function ClientsPage() {
 
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const [editingClient, setEditingClient] = useState<ClientDto | null>(null);
   const [clientOpen, setClientOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<ClientDto | null>(null);
+  const [editingService, setEditingService] = useState<ServiceDto | null>(null);
   const [serviceOpen, setServiceOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<ServiceDto | null>(null);
   const [search, setSearch] = useState('');
   const [phoneMask, setPhoneMask] = useState('');
 
@@ -86,42 +106,114 @@ export default function ClientsPage() {
     defaultValues: { name: '', phone: '', notes: '', consentGiven: false },
   });
 
-  const serviceForm = useForm<ServiceFormInput, unknown, z.output<typeof serviceFormSchema>>({
+  const serviceForm = useForm<ServiceFormInput, unknown, ServiceFormOutput>({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: {
-      name: '',
-      category: 'Geral',
-      durationMinutes: 60,
-      bufferAfterMinutes: 0,
-      priceLabel: '',
-    },
+    defaultValues: SERVICE_DEFAULTS,
   });
 
-  const createClient = useMutation({
-    mutationFn: (body: z.output<typeof clientFormSchema>) => api<ClientDto>('/clients', { method: 'POST', body }),
+  function closeClientModal(): void {
+    setClientOpen(false);
+    setEditingClient(null);
+    clientForm.reset({ name: '', phone: '', notes: '', consentGiven: false });
+    setPhoneMask('');
+  }
+
+  function openNewClient(): void {
+    setEditingClient(null);
+    clientForm.reset({ name: '', phone: '', notes: '', consentGiven: false });
+    setPhoneMask('');
+    setClientOpen(true);
+  }
+
+  function openEditClient(client: ClientDto): void {
+    const masked = formatBrazilianPhone(client.phone);
+    setEditingClient(client);
+    clientForm.reset({
+      name: client.name,
+      phone: masked,
+      notes: client.notes ?? '',
+      consentGiven: true,
+    });
+    setPhoneMask(masked);
+    setClientOpen(true);
+  }
+
+  function closeServiceModal(): void {
+    setServiceOpen(false);
+    setEditingService(null);
+    serviceForm.reset(SERVICE_DEFAULTS);
+  }
+
+  function openNewService(): void {
+    setEditingService(null);
+    serviceForm.reset(SERVICE_DEFAULTS);
+    setServiceOpen(true);
+  }
+
+  function openEditService(service: ServiceDto): void {
+    setEditingService(service);
+    serviceForm.reset({
+      name: service.name,
+      category: service.category,
+      durationMinutes: service.durationMinutes,
+      bufferAfterMinutes: service.bufferAfterMinutes,
+      priceLabel: centsToPriceLabel(service.priceCents),
+    });
+    setServiceOpen(true);
+  }
+
+  const saveClient = useMutation({
+    mutationFn: async (body: z.output<typeof clientFormSchema>) => {
+      if (editingClient) {
+        return api<ClientDto>(`/clients/${editingClient.id}`, {
+          method: 'PATCH',
+          body: { name: body.name, phone: body.phone, notes: body.notes },
+        });
+      }
+      return api<ClientDto>('/clients', { method: 'POST', body });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['clients'] });
-      showToast({ tone: 'success', title: 'Cliente cadastrada' });
-      setClientOpen(false);
-      clientForm.reset();
-      setPhoneMask('');
+      showToast({
+        tone: 'success',
+        title: editingClient ? 'Cliente atualizada' : 'Cliente cadastrada',
+      });
+      closeClientModal();
     },
   });
 
-  const createService = useMutation({
-    mutationFn: (body: z.output<typeof createServiceBodySchema>) =>
-      api<ServiceDto>('/services', { method: 'POST', body }),
+  const removeClient = useMutation({
+    mutationFn: (id: string) => api(`/clients/${id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['clients'] });
+      showToast({ tone: 'success', title: 'Cliente excluída' });
+      setClientToDelete(null);
+    },
+  });
+
+  const saveService = useMutation({
+    mutationFn: async (body: ServiceFormOutput) => {
+      if (editingService) {
+        return api<ServiceDto>(`/services/${editingService.id}`, { method: 'PATCH', body });
+      }
+      return api<ServiceDto>('/services', { method: 'POST', body });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['services'] });
-      showToast({ tone: 'success', title: 'Serviço cadastrado' });
-      setServiceOpen(false);
-      serviceForm.reset({
-        name: '',
-        category: 'Geral',
-        durationMinutes: 60,
-        bufferAfterMinutes: 0,
-        priceLabel: '',
+      showToast({
+        tone: 'success',
+        title: editingService ? 'Serviço atualizado' : 'Serviço cadastrado',
       });
+      closeServiceModal();
+    },
+  });
+
+  const removeService = useMutation({
+    mutationFn: (id: string) => api(`/services/${id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['services'] });
+      showToast({ tone: 'success', title: 'Serviço excluído' });
+      setServiceToDelete(null);
     },
   });
 
@@ -150,7 +242,7 @@ export default function ClientsPage() {
               )}
             </Field>
           </div>
-          <Button leadingIcon={<Plus className="size-4" aria-hidden="true" />} onClick={() => setClientOpen(true)}>
+          <Button leadingIcon={<Plus className="size-4" aria-hidden="true" />} onClick={openNewClient}>
             Nova cliente
           </Button>
         </div>
@@ -168,7 +260,7 @@ export default function ClientsPage() {
             title="Nenhuma cliente ainda"
             description="Cadastre quem você atende para marcar horários na agenda."
             action={
-              <Button variant="secondary" onClick={() => setClientOpen(true)}>
+              <Button variant="secondary" onClick={openNewClient}>
                 Cadastrar cliente
               </Button>
             }
@@ -189,6 +281,24 @@ export default function ClientsPage() {
                     >
                       {client.notes?.trim() || 'Sem observações'}
                     </p>
+                    <div className="mt-auto flex gap-2 pt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        leadingIcon={<Pencil className="size-3.5" aria-hidden="true" />}
+                        onClick={() => openEditClient(client)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leadingIcon={<Trash2 className="size-3.5" aria-hidden="true" />}
+                        onClick={() => setClientToDelete(client)}
+                      >
+                        Excluir
+                      </Button>
+                    </div>
                   </CardBody>
                 </Card>
               </li>
@@ -203,7 +313,7 @@ export default function ClientsPage() {
           <Button
             variant="secondary"
             leadingIcon={<Plus className="size-4" aria-hidden="true" />}
-            onClick={() => setServiceOpen(true)}
+            onClick={openNewService}
           >
             Novo serviço
           </Button>
@@ -222,7 +332,7 @@ export default function ClientsPage() {
             title="Nenhum serviço cadastrado"
             description="A duração e o valor entram na agenda e no financeiro. Cadastre o que você oferece."
             action={
-              <Button variant="secondary" onClick={() => setServiceOpen(true)}>
+              <Button variant="secondary" onClick={openNewService}>
                 Cadastrar serviço
               </Button>
             }
@@ -232,15 +342,33 @@ export default function ClientsPage() {
             {services.data!.items.map((service) => (
               <li
                 key={service.id}
-                className="rounded-card border-brown-100 flex items-center justify-between gap-4 border bg-white px-4 py-3"
+                className="rounded-card border-brown-100 flex flex-col gap-3 border bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="text-brown-900 font-medium">{service.name}</p>
                   <p className="text-brown-500 text-sm">
                     {service.category} · {service.durationMinutes} min
                   </p>
                 </div>
-                <p className="text-brown-900 font-semibold">{formatCents(service.priceCents)}</p>
+                <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                  <p className="text-brown-900 mr-2 font-semibold">{formatCents(service.priceCents)}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leadingIcon={<Pencil className="size-3.5" aria-hidden="true" />}
+                    onClick={() => openEditService(service)}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leadingIcon={<Trash2 className="size-3.5" aria-hidden="true" />}
+                    onClick={() => setServiceToDelete(service)}
+                  >
+                    Excluir
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -249,36 +377,35 @@ export default function ClientsPage() {
 
       <Modal
         open={clientOpen}
-        onClose={() => setClientOpen(false)}
-        title="Nova cliente"
-        description="O contato fica só na sua lista."
+        onClose={closeClientModal}
+        title={editingClient ? 'Editar cliente' : 'Nova cliente'}
+        description={
+          editingClient
+            ? 'As alterações valem só na sua lista.'
+            : 'O contato fica só na sua lista.'
+        }
         footer={
           <>
-            <Button variant="ghost" onClick={() => setClientOpen(false)}>
+            <Button variant="ghost" onClick={closeClientModal}>
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              form="new-client"
-              isLoading={clientForm.formState.isSubmitting}
-            >
+            <Button type="submit" form="client-form" isLoading={saveClient.isPending}>
               Salvar
             </Button>
           </>
         }
       >
         <form
-          id="new-client"
+          id="client-form"
           className="flex flex-col gap-4"
           onSubmit={clientForm.handleSubmit(async (values) => {
             try {
-              await createClient.mutateAsync(values);
+              await saveClient.mutateAsync(values);
             } catch (error) {
               showToast({
                 tone: 'danger',
-                title: 'Não foi possível cadastrar',
-                description:
-                  error instanceof ApiClientError ? error.message : 'Confira os dados e tente de novo.',
+                title: 'Não foi possível salvar',
+                description: errorMessage(error),
               });
             }
           })}
@@ -309,48 +436,90 @@ export default function ClientsPage() {
           <Field label="Observações" error={clientForm.formState.errors.notes?.message}>
             {(props) => <Textarea {...props} {...clientForm.register('notes')} />}
           </Field>
-          <label className="text-brown-700 flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1 size-4 accent-gold-600"
-              {...clientForm.register('consentGiven')}
-            />
-            A cliente autorizou guardar o contato e receber avisos desta profissional.
-          </label>
-          {clientForm.formState.errors.consentGiven && (
-            <p className="text-danger-700 text-sm">{clientForm.formState.errors.consentGiven.message}</p>
+          {!editingClient && (
+            <>
+              <label className="text-brown-700 flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-4 accent-gold-600"
+                  {...clientForm.register('consentGiven')}
+                />
+                A cliente autorizou guardar o contato e receber avisos desta profissional.
+              </label>
+              {clientForm.formState.errors.consentGiven && (
+                <p className="text-danger-700 text-sm">{clientForm.formState.errors.consentGiven.message}</p>
+              )}
+            </>
           )}
         </form>
       </Modal>
 
       <Modal
+        open={Boolean(clientToDelete)}
+        onClose={() => setClientToDelete(null)}
+        title="Excluir cliente?"
+        description="A ficha sai da sua lista. Atendimentos já lançados continuam no histórico."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setClientToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              isLoading={removeClient.isPending}
+              onClick={() => {
+                if (!clientToDelete) return;
+                void removeClient.mutateAsync(clientToDelete.id).catch((error: unknown) => {
+                  showToast({
+                    tone: 'danger',
+                    title: 'Não foi possível excluir',
+                    description: errorMessage(error),
+                  });
+                });
+              }}
+            >
+              Excluir
+            </Button>
+          </>
+        }
+      >
+        <p className="text-brown-700 text-sm">
+          {clientToDelete ? (
+            <>
+              <span className="font-semibold">{clientToDelete.name}</span> não aparece mais para
+              novos agendamentos.
+            </>
+          ) : null}
+        </p>
+      </Modal>
+
+      <Modal
         open={serviceOpen}
-        onClose={() => setServiceOpen(false)}
-        title="Novo serviço"
+        onClose={closeServiceModal}
+        title={editingService ? 'Editar serviço' : 'Novo serviço'}
         description="Duração e valor são usados na agenda. O preço é em reais, guardado em centavos."
         footer={
           <>
-            <Button variant="ghost" onClick={() => setServiceOpen(false)}>
+            <Button variant="ghost" onClick={closeServiceModal}>
               Cancelar
             </Button>
-            <Button type="submit" form="new-service" isLoading={serviceForm.formState.isSubmitting}>
+            <Button type="submit" form="service-form" isLoading={saveService.isPending}>
               Salvar
             </Button>
           </>
         }
       >
         <form
-          id="new-service"
+          id="service-form"
           className="flex flex-col gap-4"
           onSubmit={serviceForm.handleSubmit(async (values) => {
             try {
-              await createService.mutateAsync(values);
+              await saveService.mutateAsync(values);
             } catch (error) {
               showToast({
                 tone: 'danger',
-                title: 'Não foi possível cadastrar o serviço',
-                description:
-                  error instanceof ApiClientError ? error.message : 'Confira os dados e tente de novo.',
+                title: 'Não foi possível salvar o serviço',
+                description: errorMessage(error),
               });
             }
           })}
@@ -395,6 +564,45 @@ export default function ClientsPage() {
             {(props) => <Input {...props} inputMode="decimal" {...serviceForm.register('priceLabel')} />}
           </Field>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(serviceToDelete)}
+        onClose={() => setServiceToDelete(null)}
+        title="Excluir serviço?"
+        description="Ele some da agenda e do site. Atendimentos já marcados não são apagados."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setServiceToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              isLoading={removeService.isPending}
+              onClick={() => {
+                if (!serviceToDelete) return;
+                void removeService.mutateAsync(serviceToDelete.id).catch((error: unknown) => {
+                  showToast({
+                    tone: 'danger',
+                    title: 'Não foi possível excluir',
+                    description: errorMessage(error),
+                  });
+                });
+              }}
+            >
+              Excluir
+            </Button>
+          </>
+        }
+      >
+        <p className="text-brown-700 text-sm">
+          {serviceToDelete ? (
+            <>
+              <span className="font-semibold">{serviceToDelete.name}</span> deixa de aparecer para
+              novas marcações.
+            </>
+          ) : null}
+        </p>
       </Modal>
     </div>
   );
