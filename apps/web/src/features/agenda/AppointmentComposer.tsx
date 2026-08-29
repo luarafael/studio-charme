@@ -5,13 +5,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Link } from 'react-router';
 import {
+  addMinutes,
   brazilianPhoneSchema,
   createAppointmentBodySchema,
   formatCents,
-  generateTimeSlots,
+  generateSlotsForRanges,
+  getWeekdayFromIsoDate,
   maskBrazilianPhone,
+  minutesToTime,
   occupiesSchedule,
+  resolveDaySchedule,
+  zonedDateTimeToUtc,
   type AppointmentDto,
+  type AvailabilityOverrideDto,
+  type BusinessHourDto,
   type ClientDto,
   type IsoDate,
   type ServiceDto,
@@ -94,6 +101,19 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
     queryFn: () => api<{ items: ServiceDto[] }>('/services'),
     enabled: open,
   });
+  const hours = useQuery({
+    queryKey: ['availability-hours'],
+    queryFn: () => api<{ items: BusinessHourDto[] }>('/availability/hours'),
+    enabled: open,
+  });
+  const overrides = useQuery({
+    queryKey: ['availability-overrides', date],
+    queryFn: () =>
+      api<{ items: AvailabilityOverrideDto[] }>('/availability/overrides', {
+        search: { from: date, to: date },
+      }),
+    enabled: open,
+  });
 
   const form = useForm<ComposerInput, unknown, ComposerInput>({
     resolver: zodResolver(composerSchema),
@@ -125,20 +145,62 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
 
   const slots = useMemo(() => {
     if (durationMinutes <= 0) return [];
-    return generateTimeSlots({
+    const weekday = getWeekdayFromIsoDate(date);
+    const allHours = hours.data?.items ?? [];
+    const weekdayRanges = allHours
+      .filter((item) => item.weekday === weekday)
+      .map((item) => ({ startMinute: item.startMinute, endMinute: item.endMinute }));
+    const dayOverrides = (overrides.data?.items ?? [])
+      .filter((item) => item.date === date)
+      .map((item) => ({
+        type: item.type,
+        startMinute: item.startMinute,
+        endMinute: item.endMinute,
+      }));
+    const resolved = resolveDaySchedule(weekdayRanges, dayOverrides);
+    if (resolved.closed) return [];
+
+    // Sem jornada salva, a área interna ainda oferece 8h–19h. Depois que a
+    // profissional publica horários, um dia sem faixa fica sem slots — não inventa expediente.
+    const ranges =
+      resolved.ranges.length > 0
+        ? resolved.ranges
+        : allHours.length === 0
+          ? [{ startMinute: SALON_OPEN_MINUTE, endMinute: SALON_CLOSE_MINUTE }]
+          : [];
+    if (ranges.length === 0) return [];
+
+    const extraBusy = resolved.extraBusy.map((range) => {
+      const startsAt = zonedDateTimeToUtc(date, minutesToTime(range.startMinute));
+      return {
+        startsAt,
+        blockedUntil: addMinutes(startsAt, range.endMinute - range.startMinute),
+      };
+    });
+
+    return generateSlotsForRanges({
       date,
-      openMinute: SALON_OPEN_MINUTE,
-      closeMinute: SALON_CLOSE_MINUTE,
+      ranges,
       durationMinutes,
       bufferAfterMinutes,
-      busy: appointments
-        .filter((item) => occupiesSchedule(item.status))
-        .map((item) => ({
-          startsAt: new Date(item.startsAt),
-          blockedUntil: new Date(item.blockedUntil),
-        })),
+      busy: [
+        ...appointments
+          .filter((item) => occupiesSchedule(item.status))
+          .map((item) => ({
+            startsAt: new Date(item.startsAt),
+            blockedUntil: new Date(item.blockedUntil),
+          })),
+        ...extraBusy,
+      ],
     });
-  }, [appointments, date, durationMinutes, bufferAfterMinutes]);
+  }, [
+    appointments,
+    date,
+    durationMinutes,
+    bufferAfterMinutes,
+    hours.data?.items,
+    overrides.data?.items,
+  ]);
 
   const availableSlots = useMemo(() => slots.filter((slot) => slot.available), [slots]);
 
@@ -362,6 +424,17 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
               {formatCents(totalPriceCents)}.
             </p>
           )}
+
+          {(hours.data?.items.length ?? 0) === 0 && !hours.isLoading ? (
+            <Alert tone="info" title="Jornada ainda não publicada">
+              Os horários abaixo usam 8h às 19h só nesta tela. No site, a cliente só vê slots
+              depois de você salvar a jornada em{' '}
+              <Link to="/app/horarios" className="text-accent-text underline-offset-2 hover:underline">
+                Horários
+              </Link>
+              .
+            </Alert>
+          ) : null}
 
           <Field label="Horário" required error={form.formState.errors.time?.message}>
             {(props) => (

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import HomePage from './HomePage';
@@ -10,6 +10,29 @@ function renderHome() {
     </MemoryRouter>,
   );
 }
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/api/v1/public/catalog')) {
+        return new Response(JSON.stringify({ professionals: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: { code: 'NOT_FOUND', message: 'not mocked' } }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('HomePage — correções de conteúdo exigidas', () => {
   it('escreve "Início" com acento no menu', () => {

@@ -126,6 +126,44 @@ export function generateTimeSlots(params: {
   return slots;
 }
 
+export type MinuteRange = {
+  startMinute: number;
+  endMinute: number;
+};
+
+/** Une várias faixas do mesmo dia (manhã e tarde, ou jornada + extra). */
+export function generateSlotsForRanges(params: {
+  date: IsoDate;
+  ranges: readonly MinuteRange[];
+  durationMinutes: number;
+  bufferAfterMinutes?: number;
+  slotMinutes?: number;
+  busy: readonly BusyRange[];
+  now?: Date;
+}): Slot[] {
+  const byTime = new Map<string, Slot>();
+  for (const range of params.ranges) {
+    if (range.endMinute <= range.startMinute) continue;
+    const slots = generateTimeSlots({
+      date: params.date,
+      openMinute: range.startMinute,
+      closeMinute: range.endMinute,
+      durationMinutes: params.durationMinutes,
+      bufferAfterMinutes: params.bufferAfterMinutes,
+      slotMinutes: params.slotMinutes,
+      busy: params.busy,
+      now: params.now,
+    });
+    for (const slot of slots) {
+      const current = byTime.get(slot.time);
+      if (!current || (slot.available && !current.available)) {
+        byTime.set(slot.time, slot);
+      }
+    }
+  }
+  return [...byTime.values()].sort((a, b) => a.time.localeCompare(b.time));
+}
+
 export function findConflictingRange(
   window: { startsAt: Date; blockedUntil: Date },
   busy: readonly BusyRange[],

@@ -117,6 +117,32 @@ describe('GET /api/v1/auth/csrf', () => {
   });
 });
 
+describe('agendamento público', () => {
+  it('valida a query de disponibilidade sem consultar o banco', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/v1/public/availability' });
+    expect(response.statusCode).toBe(422);
+    expect(response.json()).toMatchObject({ error: { code: 'VALIDATION_ERROR' } });
+  });
+
+  it('recusa reserva sem CSRF', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/public/bookings',
+      payload: {
+        professionalSlug: 'cibele',
+        serviceId: '00000000-0000-4000-8000-000000000001',
+        date: '2026-09-01',
+        time: '09:00',
+        clientName: 'Maria Silva',
+        clientPhone: '5585991234567',
+        consent: true,
+      },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ error: { code: 'CSRF_INVALID' } });
+  });
+});
+
 describe('POST /api/v1/auth/login', () => {
   it('rejeita payload inválido com o formato padronizado', async () => {
     const response = await app.inject({

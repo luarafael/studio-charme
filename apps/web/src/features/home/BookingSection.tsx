@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,6 +19,9 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
+import { api } from '@/lib/api';
+import { LiveBookingForm } from '@/features/booking/LiveBookingForm';
+import type { PublicCatalogDto } from '@studio-charme/contracts';
 
 const NO_PREFERENCE = 'sem-preferencia';
 
@@ -40,13 +44,32 @@ type BookingRequestData = z.output<typeof bookingRequestSchema>;
 /**
  * Ponto de entrada do agendamento.
  *
- * Nesta etapa o pedido segue pelo WhatsApp com todos os dados já organizados.
- * O site anterior gravava "reservas" no `localStorage` do próprio navegador e
- * marcava horários como ocupados a partir disso: além de não chegar a ninguém,
- * mostrava disponibilidade que não existia. Preferimos não exibir horário algum
- * até a agenda real do banco estar conectada.
+ * Nesta etapa o pedido segue pelo WhatsApp quando a profissional ainda não
+ * publicou jornada e serviços. Com agenda no banco, a cliente escolhe um
+ * horário real; o status fica pendente até a confirmação.
  */
 export function BookingSection() {
+  const [catalog, setCatalog] = useState<PublicCatalogDto | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api<PublicCatalogDto>('/public/catalog')
+      .then((data) => {
+        const live = data.professionals.some(
+          (item) => item.hasHours && item.services.length > 0,
+        );
+        if (!cancelled && live) setCatalog(data);
+      })
+      .catch(() => {
+        /* Sem catálogo ao vivo, o pedido segue só pelo WhatsApp. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const liveAgenda = catalog !== null;
+
   const {
     register,
     handleSubmit,
@@ -114,11 +137,25 @@ export function BookingSection() {
         <Card>
           <CardBody>
             <Alert tone="info" title="Como funciona">
-              O envio da mensagem é uma <strong>solicitação</strong> de horário, não uma
-              confirmação. A profissional responde com os horários livres e confirma o agendamento
-              com você.
+              {liveAgenda ? (
+                <>
+                  Os horários abaixo vêm da agenda real da profissional. O envio é uma{' '}
+                  <strong>solicitação</strong>, não uma confirmação.
+                </>
+              ) : (
+                <>
+                  O envio da mensagem é uma <strong>solicitação</strong> de horário, não uma
+                  confirmação. A profissional responde com os horários livres e confirma o
+                  agendamento com você.
+                </>
+              )}
             </Alert>
 
+            {liveAgenda && catalog ? (
+              <div className="mt-6">
+                <LiveBookingForm catalog={catalog} />
+              </div>
+            ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5" noValidate>
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Seu nome" required error={errors.clientName?.message}>
@@ -249,6 +286,7 @@ export function BookingSection() {
                 cada profissional.
               </p>
             </form>
+            )}
           </CardBody>
         </Card>
       </div>

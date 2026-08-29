@@ -4,6 +4,25 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { BookingSection } from './BookingSection';
 
+function mockEmptyCatalog() {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/api/v1/public/catalog')) {
+        return new Response(JSON.stringify({ professionals: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: { code: 'NOT_FOUND', message: 'not mocked' } }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }),
+  );
+}
+
 function renderSection() {
   return render(
     <MemoryRouter>
@@ -24,11 +43,13 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
 let openSpy: MockInstance<typeof window.open>;
 
 beforeEach(() => {
+  mockEmptyCatalog();
   openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 });
 
 afterEach(() => {
   openSpy.mockRestore();
+  vi.unstubAllGlobals();
 });
 
 describe('BookingSection', () => {

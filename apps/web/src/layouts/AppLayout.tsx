@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router';
-import { CalendarDays, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react';
+import { CalendarDays, Clock, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react';
 import { brandAssets, siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 const nav = [
   { to: '/app/dashboard', label: 'Painel', icon: LayoutDashboard },
   { to: '/app/agenda', label: 'Agenda', icon: CalendarDays },
+  { to: '/app/horarios', label: 'Horários', icon: Clock },
   { to: '/app/clientes', label: 'Clientes', icon: Users },
   { to: '/app/financeiro', label: 'Financeiro', icon: Wallet },
 ] as const;

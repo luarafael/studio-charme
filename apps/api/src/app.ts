@@ -18,6 +18,8 @@ import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { agendaRoutes } from './modules/agenda/routes.js';
 import { financeRoutes } from './modules/finance/routes.js';
+import { availabilityRoutes } from './modules/availability/routes.js';
+import { publicBookingRoutes } from './modules/public-booking/routes.js';
 import type { AppInstance } from './types/app.js';
 
 export const API_PREFIX = '/api/v1';
@@ -108,6 +110,8 @@ export async function buildApp(env: Env): Promise<AppInstance> {
   await app.register(authRoutes, { prefix: API_PREFIX });
   await app.register(agendaRoutes, { prefix: API_PREFIX });
   await app.register(financeRoutes, { prefix: API_PREFIX });
+  await app.register(availabilityRoutes, { prefix: API_PREFIX });
+  await app.register(publicBookingRoutes, { prefix: API_PREFIX });
 
   return app;
 }
