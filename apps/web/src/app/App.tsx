@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router';
 import { createQueryClient } from './queryClient';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ToastProvider } from '@/components/ui/Toast';
+import { AuthProvider } from '@/features/auth/AuthProvider';
 import { createAppRouter } from '@/routes/router';
 
 export function App() {
@@ -14,9 +15,11 @@ export function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <RouterProvider router={router} />
-        </ToastProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

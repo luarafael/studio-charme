@@ -66,6 +66,14 @@ export function SiteFooter() {
                   Termos de Uso
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/entrar"
+                  className="text-brown-200 hover:text-cream transition-colors"
+                >
+                  Área da equipe
+                </Link>
+              </li>
             </ul>
           </nav>
 
