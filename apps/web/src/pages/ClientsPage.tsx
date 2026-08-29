@@ -34,9 +34,10 @@ const clientFormSchema = createClientBodySchema.refine((data) => data.consentGiv
 });
 type ClientFormInput = z.input<typeof clientFormSchema>;
 
-const serviceFormSchema = createServiceBodySchema
-  .omit({ priceCents: true, durationMinutes: true, bufferAfterMinutes: true })
-  .extend({
+const serviceFormSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    category: z.string().trim().min(2).max(40),
     durationMinutes: z.coerce.number().int().min(5, 'Duração mínima de 5 minutos.').max(12 * 60),
     bufferAfterMinutes: z.coerce.number().int().min(0).max(120),
     priceLabel: z.string().min(1, 'Informe o valor.'),

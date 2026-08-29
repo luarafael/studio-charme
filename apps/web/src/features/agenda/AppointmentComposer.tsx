@@ -7,14 +7,16 @@ import { Link } from 'react-router';
 import {
   addMinutes,
   brazilianPhoneSchema,
-  createAppointmentBodySchema,
   formatCents,
   generateSlotsForRanges,
   getWeekdayFromIsoDate,
+  isoDateSchema,
   maskBrazilianPhone,
   minutesToTime,
   occupiesSchedule,
   resolveDaySchedule,
+  timeOfDaySchema,
+  uuidSchema,
   zonedDateTimeToUtc,
   type AppointmentDto,
   type AvailabilityOverrideDto,
@@ -40,9 +42,17 @@ type AppointmentComposerProps = {
   appointments: AppointmentDto[];
 };
 
-const composerSchema = createAppointmentBodySchema
-  .omit({ clientId: true, source: true })
-  .extend({
+/**
+ * Formulário próprio, sem `.omit()` no contrato.
+ * No Zod 4, omitir campos de um objeto que já tem `.refine()` (como a data ISO)
+ * quebra a página inteira ao carregar o módulo.
+ */
+const composerSchema = z
+  .object({
+    date: isoDateSchema,
+    time: timeOfDaySchema,
+    serviceIds: z.array(uuidSchema).min(1, 'Selecione ao menos um serviço.'),
+    notes: z.string().trim().max(2000).optional(),
     clientMode: z.enum(['existing', 'new']),
     clientId: z.string().optional(),
     newName: z.string().optional(),

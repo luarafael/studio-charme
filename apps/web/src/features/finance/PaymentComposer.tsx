@@ -5,9 +5,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
   PAYMENT_METHOD_LABELS,
-  createPaymentBodySchema,
   formatCents,
+  isoDateSchema,
   parseCurrencyToCents,
+  paymentMethodSchema,
   toZonedIsoDate,
   type AppointmentDto,
   type PaymentDto,
@@ -22,11 +23,13 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { api, ApiClientError } from '@/lib/api';
 
-const paymentFormSchema = createPaymentBodySchema
-  .omit({ amountCents: true, discountCents: true, appointmentId: true, clientId: true })
-  .extend({
+const paymentFormSchema = z
+  .object({
     amountLabel: z.string().min(1, 'Informe o valor recebido.'),
     discountLabel: z.string().optional(),
+    method: paymentMethodSchema,
+    paidOn: isoDateSchema,
+    notes: z.string().trim().max(2000).optional(),
   })
   .transform((data, ctx) => {
     const amountCents = parseCurrencyToCents(data.amountLabel);

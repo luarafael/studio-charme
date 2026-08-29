@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
-  createExpenseBodySchema,
+  isoDateSchema,
   parseCurrencyToCents,
   toZonedIsoDate,
   type ExpenseDto,
@@ -17,10 +17,14 @@ import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { api, ApiClientError } from '@/lib/api';
 
-const expenseFormSchema = createExpenseBodySchema
-  .omit({ amountCents: true })
-  .extend({
+const expenseFormSchema = z
+  .object({
+    description: z.string().trim().min(2, 'Descreva a despesa.').max(200),
+    category: z.string().trim().min(2, 'Informe a categoria.').max(60),
     amountLabel: z.string().min(1, 'Informe o valor.'),
+    incurredOn: isoDateSchema,
+    dueOn: isoDateSchema.optional(),
+    notes: z.string().trim().max(2000).optional(),
   })
   .transform((data, ctx) => {
     const amountCents = parseCurrencyToCents(data.amountLabel);
