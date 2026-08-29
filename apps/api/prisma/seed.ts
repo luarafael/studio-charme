@@ -6,8 +6,8 @@ import { generateToken, hashToken } from '../src/lib/tokens.js';
  * Seed inicial das três profissionais.
  *
  * Nenhuma senha é gravada: o primeiro acesso é pelo convite impresso no
- * terminal. Os e-mails abaixo são placeholders locais — substitua pelos
- * endereços reais antes de enviar convites de verdade.
+ * terminal. Os e-mails de login foram confirmados pelas profissionais e são
+ * guardados em minúsculas, que é a forma comparada na autenticação.
  *
  * Contatos públicos (WhatsApp e Instagram) vêm do site já publicado.
  */
@@ -18,7 +18,7 @@ const professionals = [
   {
     slug: 'livia',
     name: 'Lívia',
-    email: 'livia@studiocharme.local',
+    email: 'liviamariaazevedomendes456@gmail.com',
     role: 'Designer de unhas',
     bio: 'Designer de unhas especialista em alongamentos, esmaltação em gel e nail art. Criativa e detalhista, ela transforma suas unhas em verdadeiras joias que refletem sua personalidade.',
     phone: '5585992029844',
@@ -28,7 +28,7 @@ const professionals = [
   {
     slug: 'cibele',
     name: 'Cibele',
-    email: 'cibele@studiocharme.local',
+    email: 'catundacibele@gmail.com',
     role: 'Cabeleireira',
     bio: 'Cabeleireira dedicada, especialista em cortes modernos, coloração, hidratações e finalizações que realçam a beleza única de cada cliente. Com ela, cada cabelo ganha vida e movimento.',
     phone: '5585987963037',
@@ -38,7 +38,7 @@ const professionals = [
   {
     slug: 'clarisse',
     name: 'Clarisse',
-    email: 'clarisse@studiocharme.local',
+    email: 'clarissemendes1607@gmail.com',
     role: 'Especialista em olhar e depilação',
     bio: 'Clarisse é especialista em cílios, sobrancelhas e depilação, conhecida por seu cuidado minucioso e técnicas que valorizam o olhar e realçam sua expressão natural. Cada detalhe recebe sua atenção especial para resultados perfeitos.',
     phone: '5585984560521',
