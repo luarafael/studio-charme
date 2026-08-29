@@ -1,0 +1,56 @@
+# Postgres para desenvolvimento e testes locais.
+#
+# Em produção o banco é o Neon; isto existe apenas para desenvolver sem depender
+# de rede e para rodar os testes de integração contra um Postgres real, já que
+# várias regras da agenda dependem de restrições e transações do banco.
+#
+#   docker compose up -d
+#   pnpm db:migrate
+#   pnpm db:seed
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: studio-charme-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: studio_charme
+      # Credencial de desenvolvimento local, sem valor fora desta máquina.
+      # O banco de produção usa segredo próprio, definido no provedor.
+      POSTGRES_PASSWORD: studio_charme_dev
+      POSTGRES_DB: studio_charme
+      # Postgres compara e ordena texto conforme o locale; pt-BR mantém a
+      # ordenação de nomes com acento igual à esperada na interface.
+      LANG: pt_BR.utf8
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U studio_charme -d studio_charme']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Banco separado para os testes de integração, que apagam e recriam dados.
+  # Sem volume: cada subida começa limpa e nada contamina o banco de trabalho.
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: studio-charme-db-test
+    environment:
+      POSTGRES_USER: studio_charme
+      POSTGRES_PASSWORD: studio_charme_test
+      POSTGRES_DB: studio_charme_test
+    ports:
+      - '5433:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U studio_charme -d studio_charme_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

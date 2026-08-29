@@ -1,0 +1,508 @@
+// Studio Charme — modelo de dados
+//
+// Regras estruturais que atravessam o schema inteiro:
+//
+// 1. Isolamento por profissional. Quase toda tabela carrega `professionalId` e
+//    toda consulta da API filtra por ele. A única exceção deliberada é a leitura
+//    da agenda, descrita no item 3.
+// 2. Dinheiro em centavos (`Int`), nunca `Float`. Somar 0,1 + 0,2 em ponto
+//    flutuante não dá 0,3, e um caixa não pode ter esse tipo de erro.
+// 3. Agenda compartilhada para leitura. As profissionais dividem o mesmo espaço
+//    físico, então precisam ver o horário ocupado das outras para não marcar em
+//    cima e para coordenar uma visita combinada. A leitura expõe apenas horário,
+//    serviço e nome da cliente; cadastro, observações e valores continuam
+//    restritos a quem atende.
+// 4. Instantes em UTC (`DateTime`), convertidos para America/Fortaleza na borda.
+//    Datas sem hora (competência, vencimento) usam `@db.Date`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentSource {
+  WEBSITE
+  WHATSAPP
+  WALK_IN
+  INTERNAL
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  DEBIT
+  CREDIT
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIAL
+  REFUNDED
+}
+
+enum ExpenseStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum AvailabilityType {
+  EXTRA
+  TIME_OFF
+  BREAK
+  BLOCK
+}
+
+enum TokenPurpose {
+  INVITE
+  PASSWORD_RESET
+}
+
+// ---------------------------------------------------------------------------
+// Profissionais e acesso
+// ---------------------------------------------------------------------------
+
+model Professional {
+  id   String @id @default(uuid()) @db.Uuid
+  /// Identificador estável usado nas URLs públicas: livia, cibele, clarisse.
+  slug String @unique @db.VarChar(40)
+
+  name      String  @db.VarChar(120)
+  /// Usado para entrar no sistema. Guardado em minúsculas para a comparação
+  /// não depender de como foi digitado.
+  email     String  @unique @db.VarChar(180)
+  role      String  @db.VarChar(40)
+  bio       String? @db.Text
+  photoUrl  String? @db.VarChar(500)
+  phone     String? @db.VarChar(20)
+  instagram String? @db.VarChar(80)
+  /// WhatsApp em formato E.164, sem símbolos: 5585999999999.
+  whatsapp  String? @db.VarChar(20)
+
+  /// Hash Argon2id. Fica nulo até o primeiro acesso pelo convite, de modo que
+  /// nenhuma senha precisa existir no seed nem no repositório.
+  passwordHash String? @db.VarChar(255)
+
+  isActive          Boolean   @default(true)
+  /// Aparece no site público e recebe agendamentos on-line.
+  isPubliclyVisible Boolean   @default(true)
+  lastLoginAt       DateTime?
+
+  /// Percentual que fica com a profissional, em base 10000 (4000 = 40,00%).
+  /// Inteiro para o cálculo de comissão não depender de ponto flutuante.
+  commissionBasisPoints Int @default(10000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions              Session[]
+  accessTokens          AccessToken[]
+  services              Service[]
+  clients               Client[]
+  businessHours         BusinessHour[]
+  availabilityOverrides AvailabilityOverride[]
+  appointments          Appointment[]
+  payments              Payment[]
+  expenses              Expense[]
+  auditLogs             AuditLog[]
+
+  @@index([isActive, isPubliclyVisible])
+  @@map("professionals")
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// SHA-256 do token enviado no cookie. Guardar o hash impede que o vazamento
+  /// do banco permita assumir sessões ativas.
+  tokenHash String @unique @db.Char(64)
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  /// Registrados para a profissional reconhecer acessos que não fez.
+  ipAddress String? @db.VarChar(60)
+  userAgent String? @db.VarChar(300)
+
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastSeenAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+
+  @@index([professionalId, expiresAt])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model AccessToken {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Também guardado como hash: quem tiver acesso ao banco não consegue montar
+  /// um link válido de convite ou de redefinição de senha.
+  tokenHash String       @unique @db.Char(64)
+  purpose   TokenPurpose
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([professionalId, purpose])
+  @@index([expiresAt])
+  @@map("access_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Catálogo de serviços
+// ---------------------------------------------------------------------------
+
+model Service {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  name        String  @db.VarChar(120)
+  /// Categoria da vitrine: unhas, cabelo, olhar, corpo.
+  category    String  @db.VarChar(40)
+  description String? @db.Text
+
+  durationMinutes Int
+  priceCents      Int
+
+  /// Tempo reservado depois do atendimento para limpeza e preparo, contado na
+  /// checagem de conflito mas não cobrado da cliente.
+  bufferAfterMinutes Int @default(0)
+
+  isActive          Boolean @default(true)
+  isPubliclyVisible Boolean @default(true)
+  /// Ordem de exibição definida pela profissional.
+  displayOrder      Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments AppointmentService[]
+
+  /// Duas profissionais podem ter "Manicure", mas a mesma não pode duplicar.
+  @@unique([professionalId, name])
+  @@index([professionalId, isActive])
+  @@map("services")
+}
+
+// ---------------------------------------------------------------------------
+// Clientes
+// ---------------------------------------------------------------------------
+
+model Client {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  name String @db.VarChar(160)
+
+  /// WhatsApp normalizado em E.164. É a chave de identificação da pessoa:
+  /// "(85) 99202-9844", "85992029844" e "+5585992029844" convergem para o mesmo
+  /// valor, o que evita a mesma cliente entrar duas vezes.
+  phone String @db.VarChar(20)
+
+  email     String?   @db.VarChar(180)
+  birthDate DateTime? @db.Date
+  /// Observações da profissional. Nunca visíveis para as outras.
+  notes     String?   @db.Text
+
+  /// Consentimento para contato, exigido pela LGPD. Guardamos o instante para
+  /// poder comprovar quando foi dado.
+  consentGivenAt DateTime?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+  payments     Payment[]
+
+  /// Cadastro isolado por profissional: cada uma tem a sua própria ficha da
+  /// mesma pessoa, com histórico e anotações próprias. A unicidade é por par,
+  /// não global.
+  @@unique([professionalId, phone])
+  @@index([professionalId, name])
+  @@map("clients")
+}
+
+// ---------------------------------------------------------------------------
+// Disponibilidade
+// ---------------------------------------------------------------------------
+
+model BusinessHour {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  /// 0 = domingo ... 6 = sábado, no fuso do salão.
+  weekday Int
+
+  /// Minutos desde a meia-noite, no fuso do salão. Inteiros comparam e somam
+  /// sem as armadilhas de fuso que um campo de hora traria.
+  startMinute Int
+  endMinute   Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Permite mais de uma faixa no mesmo dia (manhã e tarde, com almoço no meio).
+  @@unique([professionalId, weekday, startMinute])
+  @@index([professionalId, weekday])
+  @@map("business_hours")
+}
+
+model AvailabilityOverride {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  type AvailabilityType
+
+  /// Data local do salão. Sem hora, porque a exceção é sempre de um dia.
+  date DateTime @db.Date
+
+  /// Nulos representam o dia inteiro: uma folga integral, por exemplo.
+  startMinute Int?
+  endMinute   Int?
+
+  reason String? @db.VarChar(200)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([professionalId, date])
+  @@map("availability_overrides")
+}
+
+// ---------------------------------------------------------------------------
+// Agenda
+// ---------------------------------------------------------------------------
+
+/// Agrupa atendimentos da mesma ida ao studio, inclusive com profissionais
+/// diferentes: unha com a Lívia às 14h e cílios com a Clarisse às 15h.
+/// Sem esse vínculo, uma remarcaria sem saber da outra e a cliente ficaria com
+/// um buraco no meio da visita.
+model Visit {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Telefone normalizado da cliente. É o que liga as fichas isoladas de cada
+  /// profissional à mesma pessoa, sem compartilhar os cadastros entre elas.
+  clientPhone String @db.VarChar(20)
+
+  /// Quem iniciou a visita combinada. Serve para auditoria e para a outra
+  /// profissional saber de onde veio o pedido pendente na agenda dela.
+  createdByProfessionalId String? @db.Uuid
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([clientPhone])
+  @@map("visits")
+}
+
+model Appointment {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  clientId String @db.Uuid
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  /// Preenchido quando o atendimento faz parte de uma visita com mais de um
+  /// serviço ou profissional.
+  visitId String? @db.Uuid
+  visit   Visit?  @relation(fields: [visitId], references: [id], onDelete: SetNull)
+
+  status AppointmentStatus @default(PENDING)
+  source AppointmentSource @default(INTERNAL)
+
+  /// Instantes em UTC. `endsAt` é exclusivo: um atendimento que termina 15:00 e
+  /// outro que começa 15:00 não se sobrepõem.
+  startsAt DateTime
+  endsAt   DateTime
+
+  /// Fim considerando o tempo de preparo dos serviços. É o campo usado na
+  /// checagem de conflito; `endsAt` é o que a cliente vê.
+  blockedUntil DateTime
+
+  /// Soma dos preços no momento da marcação. Copiado para o histórico não mudar
+  /// quando a profissional reajustar a tabela depois.
+  totalPriceCents Int @default(0)
+
+  /// Anotação interna, visível apenas para quem atende.
+  notes       String? @db.Text
+  /// Recado da cliente vindo do agendamento on-line.
+  clientNotes String? @db.Text
+
+  confirmedAt  DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?   @db.VarChar(200)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services AppointmentService[]
+  payments Payment[]
+
+  /// Índice principal da agenda: por profissional e faixa de horário. Cobre a
+  /// checagem de conflito e a listagem do dia.
+  @@index([professionalId, startsAt])
+  @@index([professionalId, status, startsAt])
+  @@index([clientId, startsAt])
+  @@index([visitId])
+  /// Consulta da agenda compartilhada, que atravessa profissionais.
+  @@index([startsAt])
+  @@map("appointments")
+}
+
+/// Um atendimento pode reunir vários serviços da mesma profissional, por exemplo
+/// corte com coloração. Preço e duração são congelados na marcação.
+model AppointmentService {
+  id String @id @default(uuid()) @db.Uuid
+
+  appointmentId String      @db.Uuid
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  serviceId String  @db.Uuid
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  /// Cópias do serviço no instante da marcação, para o histórico e o valor
+  /// cobrado não mudarem se o cadastro for editado depois.
+  nameSnapshot    String @db.VarChar(120)
+  priceCents      Int
+  durationMinutes Int
+
+  @@unique([appointmentId, serviceId])
+  @@index([serviceId])
+  @@map("appointment_services")
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  /// Nulo em recebimentos sem atendimento vinculado, como venda de produto.
+  appointmentId String?      @db.Uuid
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  clientId String? @db.Uuid
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  amountCents   Int
+  /// Desconto concedido, sempre positivo. O valor líquido é amount - discount.
+  discountCents Int @default(0)
+
+  method PaymentMethod
+  status PaymentStatus @default(PAID)
+
+  /// Data de competência do recebimento, no fuso do salão.
+  paidOn DateTime @db.Date
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([professionalId, paidOn])
+  @@index([professionalId, status])
+  @@index([appointmentId])
+  @@map("payments")
+}
+
+model Expense {
+  id String @id @default(uuid()) @db.Uuid
+
+  professionalId String       @db.Uuid
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
+  description String @db.VarChar(200)
+  category    String @db.VarChar(60)
+  amountCents Int
+
+  status ExpenseStatus @default(PAID)
+
+  /// Data de competência da despesa, no fuso do salão.
+  incurredOn DateTime  @db.Date
+  dueOn      DateTime? @db.Date
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([professionalId, incurredOn])
+  @@index([professionalId, status])
+  @@map("expenses")
+}
+
+// ---------------------------------------------------------------------------
+// Auditoria
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Nulo em eventos anteriores à identificação, como tentativa de login com
+  /// e-mail inexistente.
+  professionalId String?       @db.Uuid
+  professional   Professional? @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+
+  /// Ex.: auth.login.success, appointment.cancel, client.delete.
+  action   String  @db.VarChar(80)
+  /// Tipo e identificador do registro afetado.
+  entity   String  @db.VarChar(40)
+  entityId String? @db.Uuid
+
+  /// Contexto do evento em JSON. Nunca recebe senha, token ou dado sensível.
+  metadata  Json?
+  ipAddress String? @db.VarChar(60)
+  userAgent String? @db.VarChar(300)
+
+  createdAt DateTime @default(now())
+
+  @@index([professionalId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
