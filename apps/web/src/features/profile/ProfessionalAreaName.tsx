@@ -67,14 +67,14 @@ export function ProfessionalAreaName({
           setError(null);
           setOpen(true);
         }}
-        className="group flex min-w-0 max-w-full items-center gap-1.5 rounded-control text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
+        className="group flex min-w-0 max-w-full items-start gap-1.5 rounded-control text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400"
         aria-label={`Alterar o nome da área, hoje ${professional.name}`}
       >
         <span
           className={
             variant === 'header'
-              ? 'text-brown-900 truncate font-semibold'
-              : 'font-display text-gold-500 truncate text-lg leading-none'
+              ? 'text-brown-900 min-w-0 text-pretty break-words font-semibold leading-tight'
+              : 'font-display text-gold-500 min-w-0 text-pretty break-words text-base leading-tight'
           }
         >
           {professional.name}
@@ -82,8 +82,8 @@ export function ProfessionalAreaName({
         <Pencil
           className={
             variant === 'header'
-              ? 'text-brown-400 size-3.5 shrink-0'
-              : 'text-gold-500 size-3.5 shrink-0 opacity-80 group-hover:opacity-100'
+              ? 'text-brown-400 mt-0.5 size-3.5 shrink-0'
+              : 'text-gold-500 mt-0.5 size-3.5 shrink-0 opacity-80 group-hover:opacity-100'
           }
           aria-hidden="true"
         />

@@ -21,14 +21,18 @@ export function AppLayout() {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-cream-warm min-h-svh lg:grid lg:grid-cols-[16rem_1fr]">
+    <div className="bg-cream-warm min-h-svh lg:grid lg:grid-cols-[18rem_1fr]">
       <a href="#conteudo-app" className="skip-link">
         Pular para o conteúdo
       </a>
       <aside className="bg-brown-900 text-cream hidden flex-col lg:flex">
-        <div className="flex items-center gap-3 px-5 py-6">
-          {professional && <ProfessionalPhoto professional={professional} className="size-10" />}
-          <div className="min-w-0">
+        <div className="flex items-start gap-3 px-5 py-6">
+          {professional && (
+            <div className="shrink-0">
+              <ProfessionalPhoto professional={professional} className="size-10" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
             {professional ? (
               <ProfessionalAreaName professional={professional} />
             ) : (
