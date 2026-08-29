@@ -46,8 +46,7 @@ async function loadAuthenticated(
       name: true,
       email: true,
       role: true,
-      photoMime: true,
-      photoUpdatedAt: true,
+      photoUrl: true,
     },
   });
   return toAuthenticatedProfessional(row);
@@ -60,13 +59,19 @@ export async function updateOwnPhoto(
   body: UpdateProfilePhotoBody,
 ): Promise<AuthenticatedProfessional> {
   const { bytes, mime } = decodeUploadedImage(body.imageBase64, body.mimeType);
+  const current = await prisma.professional.findUniqueOrThrow({
+    where: { id: professionalId },
+    select: { slug: true },
+  });
+  const photoUpdatedAt = new Date();
 
   await prisma.professional.update({
     where: { id: professionalId },
     data: {
       photoBytes: bytes,
       photoMime: mime,
-      photoUpdatedAt: new Date(),
+      photoUpdatedAt,
+      photoUrl: `/public/professionals/${current.slug}/photo?v=${photoUpdatedAt.toISOString()}`,
     },
   });
 
@@ -92,6 +97,7 @@ export async function removeOwnPhoto(
       photoBytes: null,
       photoMime: null,
       photoUpdatedAt: null,
+      photoUrl: null,
     },
   });
 

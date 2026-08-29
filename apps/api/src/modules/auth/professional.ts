@@ -6,8 +6,7 @@ export const professionalSessionSelect = {
   name: true,
   email: true,
   role: true,
-  photoMime: true,
-  photoUpdatedAt: true,
+  photoUrl: true,
 } as const;
 
 type ProfessionalSessionRow = {
@@ -16,8 +15,7 @@ type ProfessionalSessionRow = {
   name: string;
   email: string;
   role: string;
-  photoMime: string | null;
-  photoUpdatedAt: Date | null;
+  photoUrl: string | null;
 };
 
 export function toAuthenticatedProfessional(
@@ -29,9 +27,6 @@ export function toAuthenticatedProfessional(
     name: row.name,
     email: row.email,
     role: row.role,
-    photoUrl:
-      row.photoMime && row.photoUpdatedAt
-        ? `/public/professionals/${row.slug}/photo?v=${row.photoUpdatedAt.toISOString()}`
-        : null,
+    photoUrl: row.photoUrl,
   };
 }

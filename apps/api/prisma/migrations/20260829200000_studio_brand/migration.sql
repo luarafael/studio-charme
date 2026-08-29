@@ -1,0 +1,1 @@
+-- Reservada. A logo deixou de ser global; a foto fica em cada profissional.
