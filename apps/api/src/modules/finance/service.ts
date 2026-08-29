@@ -1,10 +1,10 @@
 import type { Expense, Payment } from '@prisma/client';
 import {
-  addIsoDateDays,
   isoDateToUtcDate,
   netPaymentCents,
   paymentExceedsDue,
   paidTowardAppointmentCents,
+  utcDateOnlyRange,
   utcDateToIsoDate,
   type CreateExpenseBody,
   type CreatePaymentBody,
@@ -12,6 +12,8 @@ import {
   type IsoDate,
   type PaymentDto,
   type PaymentStatus,
+  type UpdateExpenseBody,
+  type UpdatePaymentBody,
 } from '@studio-charme/contracts';
 import type { FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
@@ -50,10 +52,7 @@ export function toExpenseDto(record: Expense): ExpenseDto {
 }
 
 function dateOnlyRange(from: IsoDate, to: IsoDate): { gte: Date; lt: Date } {
-  return {
-    gte: isoDateToUtcDate(from),
-    lt: isoDateToUtcDate(addIsoDateDays(to, 1)),
-  };
+  return utcDateOnlyRange(from, to);
 }
 
 export async function listPayments(
@@ -97,7 +96,8 @@ export async function createPayment(
 ): Promise<PaymentDto> {
   const netCents = netPaymentCents(body.amountCents, body.discountCents);
   let clientId = body.clientId ?? null;
-  let status: PaymentStatus = 'PAID';
+  const requestedStatus = body.status ?? 'PAID';
+  let status: PaymentStatus = requestedStatus;
 
   if (body.appointmentId) {
     const appointment = await prisma.appointment.findFirst({
@@ -113,12 +113,14 @@ export async function createPayment(
       select: { amountCents: true, discountCents: true, status: true },
     });
     const alreadyPaid = paidTowardAppointmentCents(existing);
-    if (paymentExceedsDue(appointment.totalPriceCents, alreadyPaid, netCents)) {
+    if (requestedStatus === 'PAID' && paymentExceedsDue(appointment.totalPriceCents, alreadyPaid, netCents)) {
       throw new AppError('PAYMENT_EXCEEDS_TOTAL', 422);
     }
 
-    const remainingAfter = appointment.totalPriceCents - alreadyPaid - netCents;
-    status = remainingAfter > 0 ? 'PARTIAL' : 'PAID';
+    if (requestedStatus === 'PAID') {
+      const remainingAfter = appointment.totalPriceCents - alreadyPaid - netCents;
+      status = remainingAfter > 0 ? 'PARTIAL' : 'PAID';
+    }
   } else if (body.clientId) {
     const client = await prisma.client.findFirst({
       where: { id: body.clientId, professionalId, isActive: true },
@@ -181,4 +183,147 @@ export async function createExpense(
   });
 
   return toExpenseDto(created);
+}
+
+async function findOwnedPayment(prisma: PrismaClient, professionalId: string, id: string) {
+  const record = await prisma.payment.findFirst({
+    where: { id, professionalId },
+    include: { client: { select: { name: true } } },
+  });
+  if (!record) throw notFound();
+  return record;
+}
+
+async function findOwnedExpense(prisma: PrismaClient, professionalId: string, id: string) {
+  const record = await prisma.expense.findFirst({
+    where: { id, professionalId },
+  });
+  if (!record) throw notFound();
+  return record;
+}
+
+export async function updatePayment(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+  body: UpdatePaymentBody,
+): Promise<PaymentDto> {
+  const current = await findOwnedPayment(prisma, professionalId, id);
+  const netCents = netPaymentCents(body.amountCents, body.discountCents);
+  let clientId = body.clientId === undefined ? current.clientId : body.clientId;
+  let status: PaymentStatus = body.status;
+
+  if (current.appointmentId) {
+    const appointment = await prisma.appointment.findFirst({
+      where: { id: current.appointmentId, professionalId },
+      select: { id: true, clientId: true, totalPriceCents: true },
+    });
+    if (!appointment) throw notFound();
+    clientId = appointment.clientId;
+
+    const existing = await prisma.payment.findMany({
+      where: { professionalId, appointmentId: appointment.id, id: { not: current.id } },
+      select: { amountCents: true, discountCents: true, status: true },
+    });
+    const alreadyPaid = paidTowardAppointmentCents(existing);
+    if (body.status === 'PAID' && paymentExceedsDue(appointment.totalPriceCents, alreadyPaid, netCents)) {
+      throw new AppError('PAYMENT_EXCEEDS_TOTAL', 422);
+    }
+    if (body.status === 'PAID') {
+      const remainingAfter = appointment.totalPriceCents - alreadyPaid - netCents;
+      status = remainingAfter > 0 ? 'PARTIAL' : 'PAID';
+    }
+  } else if (clientId) {
+    const client = await prisma.client.findFirst({
+      where: { id: clientId, professionalId, isActive: true },
+      select: { id: true },
+    });
+    if (!client) throw notFound();
+  }
+
+  const updated = await prisma.payment.update({
+    where: { id: current.id },
+    data: {
+      clientId,
+      amountCents: body.amountCents,
+      discountCents: body.discountCents,
+      method: body.method,
+      status,
+      paidOn: isoDateToUtcDate(body.paidOn),
+      notes: body.notes?.trim() ? body.notes.trim() : null,
+    },
+    include: { client: { select: { name: true } } },
+  });
+
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.PAYMENT_UPDATED,
+    entity: 'payment',
+    entityId: updated.id,
+    professionalId,
+  });
+
+  return toPaymentDto(updated);
+}
+
+export async function deletePayment(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+): Promise<void> {
+  const current = await findOwnedPayment(prisma, professionalId, id);
+  await prisma.payment.delete({ where: { id: current.id } });
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.PAYMENT_DELETED,
+    entity: 'payment',
+    entityId: current.id,
+    professionalId,
+  });
+}
+
+export async function updateExpense(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+  body: UpdateExpenseBody,
+): Promise<ExpenseDto> {
+  const current = await findOwnedExpense(prisma, professionalId, id);
+  const updated = await prisma.expense.update({
+    where: { id: current.id },
+    data: {
+      description: body.description,
+      category: body.category,
+      amountCents: body.amountCents,
+      incurredOn: isoDateToUtcDate(body.incurredOn),
+      dueOn: body.dueOn === undefined ? undefined : body.dueOn ? isoDateToUtcDate(body.dueOn) : null,
+      notes: body.notes === undefined ? undefined : body.notes.trim() ? body.notes.trim() : null,
+    },
+  });
+
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.EXPENSE_UPDATED,
+    entity: 'expense',
+    entityId: updated.id,
+    professionalId,
+  });
+
+  return toExpenseDto(updated);
+}
+
+export async function deleteExpense(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+  professionalId: string,
+  id: string,
+): Promise<void> {
+  const current = await findOwnedExpense(prisma, professionalId, id);
+  await prisma.expense.delete({ where: { id: current.id } });
+  await recordAudit(prisma, request, {
+    action: AUDIT_ACTIONS.EXPENSE_DELETED,
+    entity: 'expense',
+    entityId: current.id,
+    professionalId,
+  });
 }

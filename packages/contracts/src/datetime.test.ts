@@ -6,11 +6,14 @@ import {
   getWeekdayFromIsoDate,
   isoDateSchema,
   minutesToTime,
+  rangeForPeriod,
+  startOfMondayWeek,
   startOfZonedDay,
   timeOfDaySchema,
   timeToMinutes,
   toZonedIsoDate,
   toZonedTimeOfDay,
+  utcDateOnlyRange,
   zonedDateTimeToUtc,
 } from './datetime.js';
 
@@ -149,5 +152,30 @@ describe('timeOfDaySchema', () => {
 describe('SALON_TIME_ZONE', () => {
   it('está fixado no fuso de operação do salão', () => {
     expect(SALON_TIME_ZONE).toBe('America/Fortaleza');
+  });
+});
+
+describe('rangeForPeriod', () => {
+  it('usa a segunda como início da semana', () => {
+    // 2026-08-29 é sábado.
+    expect(startOfMondayWeek('2026-08-29')).toBe('2026-08-24');
+    expect(rangeForPeriod('week', '2026-08-29')).toEqual({
+      from: '2026-08-24',
+      to: '2026-08-30',
+    });
+  });
+
+  it('recorte do dia e do mês', () => {
+    expect(rangeForPeriod('day', '2026-08-29')).toEqual({ from: '2026-08-29', to: '2026-08-29' });
+    expect(rangeForPeriod('month', '2026-08-29')).toEqual({ from: '2026-08-01', to: '2026-08-31' });
+  });
+
+  it('não desloca @db.Date pelo fuso do salão', () => {
+    expect(utcDateOnlyRange('2026-08-01', '2026-08-31').gte.toISOString()).toBe(
+      '2026-08-01T00:00:00.000Z',
+    );
+    expect(utcDateOnlyRange('2026-08-01', '2026-08-31').lt.toISOString()).toBe(
+      '2026-09-01T00:00:00.000Z',
+    );
   });
 });

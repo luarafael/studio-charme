@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
+  formatCents,
   isoDateSchema,
   parseCurrencyToCents,
   toZonedIsoDate,
@@ -16,6 +17,10 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { api, ApiClientError } from '@/lib/api';
+
+function centsToInputLabel(cents: number): string {
+  return formatCents(cents).replace(/[^\d,]/g, '');
+}
 
 const expenseFormSchema = z
   .object({
@@ -48,26 +53,31 @@ type ExpenseFormOutput = z.output<typeof expenseFormSchema>;
 type ExpenseComposerProps = {
   open: boolean;
   onClose: () => void;
+  expense?: ExpenseDto;
 };
 
-export function ExpenseComposer({ open, onClose }: ExpenseComposerProps) {
+export function ExpenseComposer({ open, onClose, expense }: ExpenseComposerProps) {
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
   const today = toZonedIsoDate(new Date());
+  const editing = expense !== undefined;
 
   const form = useForm<ExpenseFormInput, unknown, ExpenseFormOutput>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      description: '',
-      category: 'Produtos',
-      amountLabel: '',
-      incurredOn: today,
-      notes: '',
+      description: expense?.description ?? '',
+      category: expense?.category ?? 'Produtos',
+      amountLabel: expense ? centsToInputLabel(expense.amountCents) : '',
+      incurredOn: expense?.incurredOn ?? today,
+      notes: expense?.notes ?? '',
     },
   });
 
-  const create = useMutation({
-    mutationFn: (body: ExpenseFormOutput) => api<ExpenseDto>('/expenses', { method: 'POST', body }),
+  const save = useMutation({
+    mutationFn: (body: ExpenseFormOutput) =>
+      editing
+        ? api<ExpenseDto>(`/expenses/${expense.id}`, { method: 'PATCH', body })
+        : api<ExpenseDto>('/expenses', { method: 'POST', body }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       await queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -79,8 +89,8 @@ export function ExpenseComposer({ open, onClose }: ExpenseComposerProps) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Registrar despesa"
-      description="O gasto entra só no seu saldo do mês. Não é um lançamento contábil."
+      title={editing ? 'Editar despesa' : 'Registrar despesa'}
+      description="O gasto entra só no seu saldo. Não é um lançamento contábil."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -103,7 +113,7 @@ export function ExpenseComposer({ open, onClose }: ExpenseComposerProps) {
         onSubmit={form.handleSubmit(async (values) => {
           setFormError(null);
           try {
-            await create.mutateAsync(values);
+            await save.mutateAsync(values);
           } catch (error) {
             setFormError(error instanceof ApiClientError ? error.message : 'Não foi possível salvar.');
           }

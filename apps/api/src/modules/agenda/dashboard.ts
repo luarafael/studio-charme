@@ -1,44 +1,52 @@
 import type { PrismaClient } from '@prisma/client';
-import { endOfZonedDay, startOfZonedDay, toZonedIsoDate, type DashboardDto } from '@studio-charme/contracts';
+import {
+  endOfZonedDay,
+  rangeForPeriod,
+  startOfZonedDay,
+  toZonedIsoDate,
+  utcDateOnlyRange,
+  type DashboardDto,
+  type IsoDate,
+} from '@studio-charme/contracts';
 import { toAppointmentDto } from './service.js';
-
-function startOfMonth(date: Date): Date {
-  const iso = toZonedIsoDate(date);
-  const [year, month] = iso.split('-') as [string, string];
-  return startOfZonedDay(`${year}-${month}-01`);
-}
 
 export async function getDashboard(
   prisma: PrismaClient,
   professionalId: string,
   now = new Date(),
+  range?: { from: IsoDate; to: IsoDate },
 ): Promise<DashboardDto> {
   const today = toZonedIsoDate(now);
-  const todayStart = startOfZonedDay(today);
-  const tomorrow = endOfZonedDay(today);
-  const monthStart = startOfMonth(now);
+  const period = range ?? rangeForPeriod('month', today);
+  const periodStart = startOfZonedDay(period.from);
+  const periodEnd = endOfZonedDay(period.to);
+  const dateRange = utcDateOnlyRange(period.from, period.to);
 
   const [
-    todayAppointments,
+    periodAppointments,
+    periodCount,
     upcoming,
     pendingCount,
     cancelledCount,
     noShowCount,
     completed,
     payments,
+    pendingPayments,
     expenses,
     professional,
   ] = await Promise.all([
     prisma.appointment.findMany({
-      where: { professionalId, startsAt: { gte: todayStart, lt: tomorrow } },
+      where: { professionalId, startsAt: { gte: periodStart, lt: periodEnd } },
       include: { client: { select: { id: true, name: true, phone: true } }, services: true },
       orderBy: { startsAt: 'asc' },
+      take: 40,
+    }),
+    prisma.appointment.count({
+      where: { professionalId, startsAt: { gte: periodStart, lt: periodEnd } },
     }),
     prisma.appointment.findMany({
       where: {
         professionalId,
-        // A partir de agora, não só de amanhã: horário confirmado para hoje à
-        // tarde também entra em Próximos.
         startsAt: { gte: now },
         status: { in: ['PENDING', 'CONFIRMED'] },
       },
@@ -48,25 +56,34 @@ export async function getDashboard(
     }),
     prisma.appointment.count({ where: { professionalId, status: 'PENDING' } }),
     prisma.appointment.count({
-      where: { professionalId, status: 'CANCELLED', startsAt: { gte: monthStart } },
+      where: { professionalId, status: 'CANCELLED', startsAt: { gte: periodStart, lt: periodEnd } },
     }),
     prisma.appointment.count({
-      where: { professionalId, status: 'NO_SHOW', startsAt: { gte: monthStart } },
+      where: { professionalId, status: 'NO_SHOW', startsAt: { gte: periodStart, lt: periodEnd } },
     }),
     prisma.appointment.findMany({
       where: {
         professionalId,
         status: 'COMPLETED',
-        completedAt: { gte: monthStart },
+        completedAt: { gte: periodStart, lt: periodEnd },
       },
       select: { id: true, totalPriceCents: true, clientId: true },
     }),
     prisma.payment.aggregate({
-      where: { professionalId, status: 'PAID', paidOn: { gte: monthStart } },
+      where: { professionalId, status: 'PAID', paidOn: dateRange },
+      _sum: { amountCents: true, discountCents: true },
+    }),
+    prisma.payment.aggregate({
+      where: {
+        professionalId,
+        status: 'PENDING',
+        appointmentId: null,
+        paidOn: dateRange,
+      },
       _sum: { amountCents: true, discountCents: true },
     }),
     prisma.expense.aggregate({
-      where: { professionalId, status: 'PAID', incurredOn: { gte: monthStart } },
+      where: { professionalId, status: 'PAID', incurredOn: dateRange },
       _sum: { amountCents: true },
     }),
     prisma.professional.findUnique({
@@ -91,10 +108,13 @@ export async function getDashboard(
       (row._sum.amountCents ?? 0) - (row._sum.discountCents ?? 0),
     ]),
   );
-  const pendingCents = completed.reduce((sum, item) => {
+  const leftoverCompleted = completed.reduce((sum, item) => {
     const paid = paidMap.get(item.id) ?? 0;
     return sum + Math.max(0, item.totalPriceCents - paid);
   }, 0);
+  const registeredReceivable =
+    (pendingPayments._sum.amountCents ?? 0) - (pendingPayments._sum.discountCents ?? 0);
+  const pendingCents = leftoverCompleted + registeredReceivable;
   const completedTotal = completed.reduce((sum, item) => sum + item.totalPriceCents, 0);
   const averageTicketCents =
     completed.length === 0 ? 0 : Math.round(completedTotal / completed.length);
@@ -104,7 +124,7 @@ export async function getDashboard(
   const clientsServed = new Set(completed.map((item) => item.clientId)).size;
 
   return {
-    todayCount: todayAppointments.length,
+    todayCount: periodCount,
     upcomingCount: upcoming.length,
     pendingCount,
     cancelledCount,
@@ -116,7 +136,7 @@ export async function getDashboard(
     balanceCents: receivedCents - expenseCents,
     estimatedCommissionCents,
     clientsServed,
-    todayAppointments: todayAppointments.map(toAppointmentDto),
+    todayAppointments: periodAppointments.map(toAppointmentDto),
     upcomingAppointments: upcoming.map(toAppointmentDto),
   };
 }

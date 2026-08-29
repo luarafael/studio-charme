@@ -5,10 +5,22 @@ import {
   expenseSchema,
   listFinanceQuerySchema,
   paymentSchema,
+  updateExpenseBodySchema,
+  updatePaymentBodySchema,
+  uuidSchema,
 } from '@studio-charme/contracts';
 import type { AppInstance } from '../../types/app.js';
 import { getScopedProfessionalId } from '../../lib/scope.js';
-import { createExpense, createPayment, listExpenses, listPayments } from './service.js';
+import {
+  createExpense,
+  createPayment,
+  deleteExpense,
+  deletePayment,
+  listExpenses,
+  listPayments,
+  updateExpense,
+  updatePayment,
+} from './service.js';
 
 export async function financeRoutes(app: AppInstance): Promise<void> {
   app.get(
@@ -45,6 +57,38 @@ export async function financeRoutes(app: AppInstance): Promise<void> {
     },
   );
 
+  app.patch(
+    '/payments/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        body: updatePaymentBodySchema,
+        response: { 200: paymentSchema },
+      },
+    },
+    async (request) =>
+      updatePayment(
+        app.prisma,
+        request,
+        getScopedProfessionalId(request),
+        request.params.id,
+        request.body,
+      ),
+  );
+
+  app.delete(
+    '/payments/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: { params: z.object({ id: uuidSchema }) },
+    },
+    async (request, reply) => {
+      await deletePayment(app.prisma, request, getScopedProfessionalId(request), request.params.id);
+      return reply.status(204).send();
+    },
+  );
+
   app.get(
     '/expenses',
     {
@@ -76,6 +120,38 @@ export async function financeRoutes(app: AppInstance): Promise<void> {
         request.body,
       );
       return reply.status(201).send(created);
+    },
+  );
+
+  app.patch(
+    '/expenses/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        body: updateExpenseBodySchema,
+        response: { 200: expenseSchema },
+      },
+    },
+    async (request) =>
+      updateExpense(
+        app.prisma,
+        request,
+        getScopedProfessionalId(request),
+        request.params.id,
+        request.body,
+      ),
+  );
+
+  app.delete(
+    '/expenses/:id',
+    {
+      preHandler: [app.requireAuth, app.requireCsrf],
+      schema: { params: z.object({ id: uuidSchema }) },
+    },
+    async (request, reply) => {
+      await deleteExpense(app.prisma, request, getScopedProfessionalId(request), request.params.id);
+      return reply.status(204).send();
     },
   );
 }

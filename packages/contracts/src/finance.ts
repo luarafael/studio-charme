@@ -49,12 +49,30 @@ export const createPaymentBodySchema = z
     method: paymentMethodSchema,
     paidOn: isoDateSchema,
     notes: z.string().trim().max(2000).optional(),
+    /** PAID = já entrou. PENDING = a receber. */
+    status: z.enum(['PENDING', 'PAID']).optional(),
   })
   .refine((data) => data.discountCents <= data.amountCents, {
     path: ['discountCents'],
     message: 'O desconto não pode ser maior que o valor recebido.',
   });
 export type CreatePaymentBody = z.infer<typeof createPaymentBodySchema>;
+
+export const updatePaymentBodySchema = z
+  .object({
+    amountCents: centsSchema,
+    discountCents: centsSchema.default(0),
+    method: paymentMethodSchema,
+    paidOn: isoDateSchema,
+    notes: z.string().trim().max(2000).optional(),
+    status: z.enum(['PENDING', 'PAID']),
+    clientId: uuidSchema.nullable().optional(),
+  })
+  .refine((data) => data.discountCents <= data.amountCents, {
+    path: ['discountCents'],
+    message: 'O desconto não pode ser maior que o valor recebido.',
+  });
+export type UpdatePaymentBody = z.infer<typeof updatePaymentBodySchema>;
 
 export const paymentSchema = z.object({
   id: uuidSchema,
@@ -80,6 +98,16 @@ export const createExpenseBodySchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 export type CreateExpenseBody = z.infer<typeof createExpenseBodySchema>;
+
+export const updateExpenseBodySchema = z.object({
+  description: z.string().trim().min(2, 'Descreva a despesa.').max(200),
+  category: z.string().trim().min(2, 'Informe a categoria.').max(60),
+  amountCents: centsSchema,
+  incurredOn: isoDateSchema,
+  dueOn: isoDateSchema.nullable().optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+export type UpdateExpenseBody = z.infer<typeof updateExpenseBodySchema>;
 
 export const expenseSchema = z.object({
   id: uuidSchema,

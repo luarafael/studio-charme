@@ -190,3 +190,54 @@ export function addIsoDateDays(date: IsoDate, days: number): IsoDate {
   const shifted = new Date(Date.UTC(year, month - 1, day + days));
   return `${String(shifted.getUTCFullYear()).padStart(4, '0')}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`;
 }
+
+/** Segunda-feira da semana do dia, no calendário civil. */
+export function startOfMondayWeek(date: IsoDate): IsoDate {
+  const weekday = getWeekdayFromIsoDate(date);
+  const daysFromMonday = weekday === 0 ? 6 : weekday - 1;
+  return addIsoDateDays(date, -daysFromMonday);
+}
+
+export const dashboardPeriodSchema = z.enum(['day', 'week', 'month']);
+export type DashboardPeriod = z.infer<typeof dashboardPeriodSchema>;
+
+/** Intervalo inclusivo (from/to) para o recorte do painel e do financeiro. */
+export function rangeForPeriod(period: DashboardPeriod, anchor: IsoDate): { from: IsoDate; to: IsoDate } {
+  if (period === 'day') return { from: anchor, to: anchor };
+  if (period === 'week') {
+    const from = startOfMondayWeek(anchor);
+    return { from, to: addIsoDateDays(from, 6) };
+  }
+  const [year, month] = anchor.split('-') as [string, string];
+  const lastDay = new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+  return {
+    from: `${year}-${month}-01`,
+    to: `${year}-${month}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
+
+export function shiftPeriodAnchor(
+  period: DashboardPeriod,
+  anchor: IsoDate,
+  direction: -1 | 1,
+): IsoDate {
+  if (period === 'day') return addIsoDateDays(anchor, direction);
+  if (period === 'week') return addIsoDateDays(anchor, direction * 7);
+  const [year, month, day] = anchor.split('-').map(Number) as [number, number, number];
+  const shifted = new Date(Date.UTC(year, month - 1 + direction, 1));
+  const lastDay = new Date(
+    Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`;
+}
+
+/**
+ * Intervalo para colunas `@db.Date` (meia-noite UTC). Não usar o fuso do salão:
+ * 01/08 00:00Z viraria 31/07 em Fortaleza e o primeiro dia do mês sumiria.
+ */
+export function utcDateOnlyRange(from: IsoDate, to: IsoDate): { gte: Date; lt: Date } {
+  return {
+    gte: isoDateToUtcDate(from),
+    lt: isoDateToUtcDate(addIsoDateDays(to, 1)),
+  };
+}

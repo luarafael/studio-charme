@@ -4,6 +4,7 @@ import {
   createAppointmentBodySchema,
   createClientBodySchema,
   createServiceBodySchema,
+  dashboardQuerySchema,
   dashboardSchema,
   endOfZonedDay,
   listAppointmentsQuerySchema,
@@ -39,9 +40,20 @@ export async function agendaRoutes(app: AppInstance): Promise<void> {
     '/dashboard',
     {
       preHandler: app.requireAuth,
-      schema: { response: { 200: dashboardSchema } },
+      schema: {
+        querystring: dashboardQuerySchema,
+        response: { 200: dashboardSchema },
+      },
     },
-    async (request) => getDashboard(app.prisma, getScopedProfessionalId(request)),
+    async (request) => {
+      const { from, to } = request.query;
+      return getDashboard(
+        app.prisma,
+        getScopedProfessionalId(request),
+        new Date(),
+        from && to ? { from, to } : undefined,
+      );
+    },
   );
 
   app.get(
