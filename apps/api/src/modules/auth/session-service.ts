@@ -212,11 +212,10 @@ export class SessionService {
       // Só trafega por HTTPS. Falso apenas no localhost, sem TLS.
       secure: this.env.COOKIE_SECURE,
       /**
-       * `lax` permite que a profissional chegue autenticada ao clicar num link
-       * externo, mas não envia o cookie em requisição de outro site, o que
-       * bloqueia CSRF nas rotas que alteram dados.
+       * `lax` no mesmo site (domínio + subdomínio). `none` quando o frontend e a
+       * API estão em hosts diferentes (Vercel + Railway), com CSRF no cabeçalho.
        */
-      sameSite: 'lax' as const,
+      sameSite: this.env.COOKIE_SAMESITE,
       path: '/',
       ...(this.env.COOKIE_DOMAIN ? { domain: this.env.COOKIE_DOMAIN } : {}),
     };
@@ -228,7 +227,7 @@ export class SessionService {
       // continua HttpOnly; este só vale combinado com ele.
       httpOnly: false,
       secure: this.env.COOKIE_SECURE,
-      sameSite: 'lax',
+      sameSite: this.env.COOKIE_SAMESITE,
       path: '/',
       ...(this.env.COOKIE_DOMAIN ? { domain: this.env.COOKIE_DOMAIN } : {}),
       ...(expiresAt ? { expires: expiresAt } : {}),
@@ -239,7 +238,7 @@ export class SessionService {
     reply.clearCookie(CSRF_COOKIE_NAME, {
       httpOnly: false,
       secure: this.env.COOKIE_SECURE,
-      sameSite: 'lax',
+      sameSite: this.env.COOKIE_SAMESITE,
       path: '/',
       ...(this.env.COOKIE_DOMAIN ? { domain: this.env.COOKIE_DOMAIN } : {}),
     });

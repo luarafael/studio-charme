@@ -65,6 +65,28 @@ describe('loadEnv', () => {
     ).toThrow(/OpenAPI/);
   });
 
+  it('rejeita SameSite=none sem cookie Secure', () => {
+    expect(() =>
+      loadEnv({
+        ...baseEnv,
+        COOKIE_SECURE: 'false',
+        COOKIE_SAMESITE: 'none',
+      }),
+    ).toThrow(/COOKIE_SAMESITE/);
+  });
+
+  it('aceita SameSite=none em produção com cookie Secure', () => {
+    const env = loadEnv({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      WEB_ORIGINS: 'https://studio-charme.vercel.app',
+      WEB_PUBLIC_URL: 'https://studio-charme.vercel.app',
+      COOKIE_SECURE: 'true',
+      COOKIE_SAMESITE: 'none',
+    });
+    expect(env.COOKIE_SAMESITE).toBe('none');
+  });
+
   it('exige HTTPS nas origens em produção', () => {
     expect(() =>
       loadEnv({

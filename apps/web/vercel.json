@@ -1,5 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm --filter @studio-charme/web build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "redirects": [
     {
       "source": "/politica_privacidade_final.html",
@@ -14,7 +18,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/).*)",
+      "source": "/((?!assets/|robots\\.txt|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ],

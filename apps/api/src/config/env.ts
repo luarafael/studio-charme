@@ -58,6 +58,11 @@ const envSchema = z
 
     /** Em produção o cookie exige HTTPS; em desenvolvimento local pode ser relaxado. */
     COOKIE_SECURE: booleanFromEnv.default(true),
+    /**
+     * `lax` no mesmo site (ex.: studiocharme.com + api.studiocharme.com).
+     * `none` quando o site está na Vercel e a API no Railway, em hosts diferentes.
+     */
+    COOKIE_SAMESITE: z.enum(['lax', 'none', 'strict']).default('lax'),
 
     /** Documentação OpenAPI só deve ficar exposta fora de produção. */
     ENABLE_API_DOCS: booleanFromEnv.default(false),
@@ -101,6 +106,14 @@ const envSchema = z
           message: 'Em produção todas as origens precisam usar HTTPS.',
         });
       }
+    }
+
+    if (env.COOKIE_SAMESITE === 'none' && !env.COOKIE_SECURE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['COOKIE_SAMESITE'],
+        message: 'COOKIE_SAMESITE=none exige COOKIE_SECURE=true.',
+      });
     }
 
     if (env.MAIL_PROVIDER === 'smtp' && (!env.SMTP_HOST || !env.SMTP_PORT)) {

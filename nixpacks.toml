@@ -1,0 +1,4 @@
+# Node 20 e pnpm 11, iguais ao packageManager da raiz.
+[variables]
+NIXPACKS_NODE_VERSION = "20"
+NIXPACKS_PNPM_VERSION = "11.17.0"

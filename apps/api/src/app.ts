@@ -91,7 +91,7 @@ export async function buildApp(env: Env): Promise<AppInstance> {
     parseOptions: {
       httpOnly: true,
       secure: env.COOKIE_SECURE,
-      sameSite: 'lax',
+      sameSite: env.COOKIE_SAMESITE,
       path: '/',
       ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
     },
