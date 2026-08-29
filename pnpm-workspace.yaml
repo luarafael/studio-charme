@@ -2,16 +2,16 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
-# Scripts de instalação são bloqueados por padrão. Aqui ficam apenas os pacotes
-# que realmente precisam compilar binários nativos ou gerar código:
-#   argon2  -> binding nativo do hash de senha
-#   prisma  -> engines de query e geração do client
-#   esbuild -> binário usado por Vite, tsx e tsup
-#   sharp   -> conversão de imagens para WebP/AVIF
-onlyBuiltDependencies:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - argon2
-  - esbuild
-  - prisma
-  - sharp
+# pnpm 11 ignora onlyBuiltDependencies e falha com ERR_PNPM_IGNORED_BUILDS.
+# allowBuilds autoriza os scripts nativos que o monorepo realmente precisa:
+#   argon2  -> hash de senha (API)
+#   prisma  -> engines e client (API)
+#   esbuild -> Vite, tsx e tsup
+#   sharp   -> otimização de imagens (web)
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  argon2: true
+  esbuild: true
+  prisma: true
+  sharp: true
