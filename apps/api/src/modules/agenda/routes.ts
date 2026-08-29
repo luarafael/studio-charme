@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import {
+  appointmentDetailSchema,
+  appointmentSchema,
   clientSchema,
   createAppointmentBodySchema,
   createClientBodySchema,
@@ -7,6 +9,7 @@ import {
   dashboardQuerySchema,
   dashboardSchema,
   endOfZonedDay,
+  listAppointmentHistoryQuerySchema,
   listAppointmentsQuerySchema,
   serviceSchema,
   startOfZonedDay,
@@ -24,6 +27,7 @@ import {
   deleteClient,
   deleteService,
   getAppointment,
+  listAppointmentHistory,
   listAppointments,
   listClients,
   listServices,
@@ -77,10 +81,35 @@ export async function agendaRoutes(app: AppInstance): Promise<void> {
   );
 
   app.get(
+    '/appointments/history',
+    {
+      preHandler: app.requireAuth,
+      schema: {
+        querystring: listAppointmentHistoryQuerySchema,
+        response: { 200: z.object({ items: z.array(appointmentSchema) }) },
+      },
+    },
+    async (request) => {
+      const professionalId = getScopedProfessionalId(request);
+      const { from, to, search } = request.query;
+      return {
+        items: await listAppointmentHistory(app.prisma, professionalId, {
+          from: from ? startOfZonedDay(from) : undefined,
+          to: to ? endOfZonedDay(to) : undefined,
+          search,
+        }),
+      };
+    },
+  );
+
+  app.get(
     '/appointments/:id',
     {
       preHandler: app.requireAuth,
-      schema: { params: z.object({ id: uuidSchema }) },
+      schema: {
+        params: z.object({ id: uuidSchema }),
+        response: { 200: appointmentDetailSchema },
+      },
     },
     async (request) =>
       getAppointment(app.prisma, getScopedProfessionalId(request), request.params.id),

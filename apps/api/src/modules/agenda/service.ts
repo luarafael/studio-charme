@@ -1,9 +1,12 @@
-import type { Appointment, AppointmentService, Client, Service } from '@prisma/client';
+import type { Appointment, AppointmentService, Client, Payment, Service } from '@prisma/client';
 import {
   appointmentSourceSchema,
   canTransitionAppointmentStatus,
   computeAppointmentWindow,
   isAppointmentInPast,
+  netPaymentCents,
+  utcDateToIsoDate,
+  type AppointmentDetailDto,
   type AppointmentDto,
   type AppointmentStatus,
   type CreateAppointmentBody,
@@ -47,10 +50,34 @@ export function toAppointmentDto(record: AppointmentRecord): AppointmentDto {
   };
 }
 
+type AppointmentDetailRecord = AppointmentRecord & { payments: Payment[] };
+
+export function toAppointmentDetailDto(record: AppointmentDetailRecord): AppointmentDetailDto {
+  return {
+    ...toAppointmentDto(record),
+    payments: record.payments.map((item) => ({
+      id: item.id,
+      amountCents: item.amountCents,
+      discountCents: item.discountCents,
+      netCents: netPaymentCents(item.amountCents, item.discountCents),
+      method: item.method,
+      status: item.status,
+      paidOn: utcDateToIsoDate(item.paidOn),
+    })),
+  };
+}
+
 const appointmentInclude = {
   client: { select: { id: true, name: true, phone: true } },
   services: true,
 } as const;
+
+const appointmentDetailInclude = {
+  ...appointmentInclude,
+  payments: { orderBy: [{ paidOn: 'asc' as const }, { createdAt: 'asc' as const }] },
+};
+
+const HISTORY_LIMIT = 200;
 
 export async function listAppointments(
   prisma: PrismaClient,
@@ -80,17 +107,53 @@ export async function listAppointments(
   return records.map(toAppointmentDto);
 }
 
+export async function listAppointmentHistory(
+  prisma: PrismaClient,
+  professionalId: string,
+  query: { from?: Date; to?: Date; search?: string },
+): Promise<AppointmentDto[]> {
+  const records = await prisma.appointment.findMany({
+    where: {
+      professionalId,
+      status: 'COMPLETED',
+      ...(query.from || query.to
+        ? {
+            startsAt: {
+              ...(query.from ? { gte: query.from } : {}),
+              ...(query.to ? { lt: query.to } : {}),
+            },
+          }
+        : {}),
+      ...(query.search
+        ? {
+            client: {
+              OR: [
+                { name: { contains: query.search, mode: 'insensitive' } },
+                { phone: { contains: query.search.replace(/\D/g, '') } },
+              ],
+            },
+          }
+        : {}),
+    },
+    include: appointmentInclude,
+    orderBy: { startsAt: 'desc' },
+    take: HISTORY_LIMIT,
+  });
+
+  return records.map(toAppointmentDto);
+}
+
 export async function getAppointment(
   prisma: PrismaClient,
   professionalId: string,
   id: string,
-): Promise<AppointmentDto> {
+): Promise<AppointmentDetailDto> {
   const record = await prisma.appointment.findFirst({
     where: { id, professionalId },
-    include: appointmentInclude,
+    include: appointmentDetailInclude,
   });
   if (!record) throw notFound();
-  return toAppointmentDto(record);
+  return toAppointmentDetailDto(record);
 }
 
 export async function createAppointment(

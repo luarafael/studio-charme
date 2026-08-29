@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router';
-import { CalendarDays, Clock, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react';
+import { CalendarDays, Clock, History, LayoutDashboard, LogOut, Users, Wallet } from 'lucide-react';
 import { brandAssets, siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 const nav = [
   { to: '/app/dashboard', label: 'Painel', icon: LayoutDashboard },
   { to: '/app/agenda', label: 'Agenda', icon: CalendarDays },
+  { to: '/app/historico', label: 'Histórico', icon: History },
   { to: '/app/horarios', label: 'Horários', icon: Clock },
   { to: '/app/clientes', label: 'Clientes', icon: Users },
   { to: '/app/financeiro', label: 'Financeiro', icon: Wallet },
@@ -85,7 +86,7 @@ export function AppLayout() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium',
+                  'flex flex-1 flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] leading-tight font-medium sm:text-xs',
                   isActive ? 'text-gold-700' : 'text-brown-600',
                 )
               }

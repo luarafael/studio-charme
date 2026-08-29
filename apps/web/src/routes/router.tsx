@@ -18,6 +18,7 @@ const AgendaPage = lazy(() => import('@/pages/AgendaPage'));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const FinancePage = lazy(() => import('@/pages/FinancePage'));
 const HoursPage = lazy(() => import('@/pages/HoursPage'));
+const HistoryPage = lazy(() => import('@/pages/HistoryPage'));
 
 function withSuspense(element: ReactNode): ReactNode {
   return <Suspense fallback={<RouteFallback />}>{element}</Suspense>;
@@ -54,6 +55,7 @@ export const routes: RouteObject[] = [
           { index: true, element: <Navigate to="/app/dashboard" replace /> },
           { path: 'dashboard', element: withSuspense(<DashboardPage />) },
           { path: 'agenda', element: withSuspense(<AgendaPage />) },
+          { path: 'historico', element: withSuspense(<HistoryPage />) },
           { path: 'clientes', element: withSuspense(<ClientsPage />) },
           { path: 'financeiro', element: withSuspense(<FinancePage />) },
           { path: 'horarios', element: withSuspense(<HoursPage />) },

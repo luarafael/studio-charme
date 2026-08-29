@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { isoDateSchema, timeOfDaySchema } from './datetime.js';
-import { appointmentSourceSchema, appointmentStatusSchema } from './enums.js';
+import {
+  appointmentSourceSchema,
+  appointmentStatusSchema,
+  paymentMethodSchema,
+  paymentStatusSchema,
+} from './enums.js';
 import { brazilianPhoneSchema } from './phone.js';
 
 export const uuidSchema = z.uuid('Identificador inválido.');
@@ -33,6 +38,21 @@ export const appointmentSchema = z.object({
 });
 export type AppointmentDto = z.infer<typeof appointmentSchema>;
 
+export const appointmentPaymentSnapshotSchema = z.object({
+  id: uuidSchema,
+  amountCents: z.number().int(),
+  discountCents: z.number().int(),
+  netCents: z.number().int(),
+  method: paymentMethodSchema,
+  status: paymentStatusSchema,
+  paidOn: isoDateSchema,
+});
+
+export const appointmentDetailSchema = appointmentSchema.extend({
+  payments: z.array(appointmentPaymentSnapshotSchema),
+});
+export type AppointmentDetailDto = z.infer<typeof appointmentDetailSchema>;
+
 export const listAppointmentsQuerySchema = z.object({
   from: isoDateSchema,
   to: isoDateSchema,
@@ -40,6 +60,13 @@ export const listAppointmentsQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
 });
 export type ListAppointmentsQuery = z.infer<typeof listAppointmentsQuerySchema>;
+
+export const listAppointmentHistoryQuerySchema = z.object({
+  search: z.string().trim().max(120).optional(),
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
+});
+export type ListAppointmentHistoryQuery = z.infer<typeof listAppointmentHistoryQuerySchema>;
 
 export const createAppointmentBodySchema = z.object({
   clientId: uuidSchema,

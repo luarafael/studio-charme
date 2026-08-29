@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import {
   addIsoDateDays,
   APPOINTMENT_STATUS_LABELS,
@@ -10,7 +10,7 @@ import {
   type AppointmentStatus,
   type IsoDate,
 } from '@studio-charme/contracts';
-import { CalendarPlus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight, History, MessageCircle } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -26,6 +26,7 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { useToast } from '@/hooks/useToast';
 import { api, ApiClientError } from '@/lib/api';
 import { AppointmentComposer } from '@/features/agenda/AppointmentComposer';
+import { AppointmentDetailModal } from '@/features/agenda/AppointmentDetailModal';
 import {
   buildAppointmentConfirmationMessage,
   openClientWhatsApp,
@@ -46,6 +47,7 @@ export default function AgendaPage() {
   });
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const { professional } = useAuth();
   const [searchParams] = useSearchParams();
@@ -56,6 +58,7 @@ export default function AgendaPage() {
   const [cancelTarget, setCancelTarget] = useState<AppointmentDto | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [payTarget, setPayTarget] = useState<AppointmentDto | null>(null);
+  const [detailTarget, setDetailTarget] = useState<AppointmentDto | null>(null);
 
   useEffect(() => {
     const parsed = isoDateSchema.safeParse(searchParams.get('date'));
@@ -137,12 +140,21 @@ export default function AgendaPage() {
             não para o studio inteiro.
           </p>
         </div>
-        <Button
-          leadingIcon={<CalendarPlus className="size-4" aria-hidden="true" />}
-          onClick={() => setComposerOpen(true)}
-        >
-          Novo atendimento
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            leadingIcon={<History className="size-4" aria-hidden="true" />}
+            onClick={() => navigate('/app/historico')}
+          >
+            Histórico
+          </Button>
+          <Button
+            leadingIcon={<CalendarPlus className="size-4" aria-hidden="true" />}
+            onClick={() => setComposerOpen(true)}
+          >
+            Novo atendimento
+          </Button>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
@@ -200,7 +212,11 @@ export default function AgendaPage() {
                 <li key={item.id}>
                   <Card>
                     <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
+                      <button
+                        type="button"
+                        className="min-w-0 cursor-pointer text-left"
+                        onClick={() => setDetailTarget(item)}
+                      >
                         <p className="text-gold-700 text-sm font-semibold">
                           {formatTime(item.startsAt)} – {formatTime(item.endsAt)}
                         </p>
@@ -208,7 +224,7 @@ export default function AgendaPage() {
                         <p className="text-brown-600 text-sm">
                           {item.services.map((service) => service.name).join(', ')}
                         </p>
-                      </div>
+                      </button>
                       <div className="flex flex-col items-start gap-2 sm:items-end">
                         <Badge tone={APPOINTMENT_STATUS_TONE[item.status]} withDot>
                           {APPOINTMENT_STATUS_LABELS[item.status]}
@@ -250,6 +266,12 @@ export default function AgendaPage() {
           )}
         </div>
       </div>
+
+      <AppointmentDetailModal
+        appointment={detailTarget}
+        open={detailTarget !== null}
+        onClose={() => setDetailTarget(null)}
+      />
 
       <AppointmentComposer
         key={composerOpen ? 'open' : 'closed'}
