@@ -252,11 +252,11 @@ export default function AgendaPage() {
       </div>
 
       <AppointmentComposer
-        key={composerOpen ? date : 'closed'}
+        key={composerOpen ? 'open' : 'closed'}
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         date={date}
-        appointments={items}
+        onSaved={setDate}
       />
 
       <PaymentComposer

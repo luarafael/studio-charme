@@ -185,7 +185,7 @@ export default function DashboardPage() {
               {data.upcomingAppointments.length === 0 ? (
                 <EmptyState
                   title="Nada agendado à frente"
-                  description="Novos horários confirmados entram nesta lista."
+                  description="Horários confirmados ou aguardando, a partir de agora, entram nesta lista."
                 />
               ) : (
                 <ul className="flex flex-col gap-3">

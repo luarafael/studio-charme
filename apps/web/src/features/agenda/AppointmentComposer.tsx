@@ -18,6 +18,7 @@ import {
   timeOfDaySchema,
   uuidSchema,
   zonedDateTimeToUtc,
+  toZonedIsoDate,
   type AppointmentDto,
   type AvailabilityOverrideDto,
   type BusinessHourDto,
@@ -27,6 +28,7 @@ import {
   type TimeOfDay,
 } from '@studio-charme/contracts';
 import { Button } from '@/components/ui/Button';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Field } from '@/components/ui/Field';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -38,8 +40,9 @@ import { api, ApiClientError } from '@/lib/api';
 type AppointmentComposerProps = {
   open: boolean;
   onClose: () => void;
+  /** Dia sugerido ao abrir; a profissional pode trocar no calendário do formulário. */
   date: IsoDate;
-  appointments: AppointmentDto[];
+  onSaved?: (date: IsoDate) => void;
 };
 
 /**
@@ -96,10 +99,12 @@ const EMPTY_SERVICE_IDS: string[] = [];
 const SALON_OPEN_MINUTE = 8 * 60;
 const SALON_CLOSE_MINUTE = 19 * 60;
 
-export function AppointmentComposer({ open, onClose, date, appointments }: AppointmentComposerProps) {
+export function AppointmentComposer({ open, onClose, date, onSaved }: AppointmentComposerProps) {
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
   const [phoneMask, setPhoneMask] = useState('');
+  const today = toZonedIsoDate(new Date());
+  const initialDate = date < today ? today : date;
 
   const clients = useQuery({
     queryKey: ['clients'],
@@ -116,20 +121,12 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
     queryFn: () => api<{ items: BusinessHourDto[] }>('/availability/hours'),
     enabled: open,
   });
-  const overrides = useQuery({
-    queryKey: ['availability-overrides', date],
-    queryFn: () =>
-      api<{ items: AvailabilityOverrideDto[] }>('/availability/overrides', {
-        search: { from: date, to: date },
-      }),
-    enabled: open,
-  });
 
   const form = useForm<ComposerInput, unknown, ComposerInput>({
     resolver: zodResolver(composerSchema),
     defaultValues: {
       clientMode: 'existing',
-      date,
+      date: initialDate,
       time: '09:00',
       serviceIds: [],
       notes: '',
@@ -137,10 +134,28 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
     },
   });
 
+  const selectedDate = useWatch({ control: form.control, name: 'date' }) ?? initialDate;
   const selectedServiceIds =
     useWatch({ control: form.control, name: 'serviceIds' }) ?? EMPTY_SERVICE_IDS;
   const selectedTime = useWatch({ control: form.control, name: 'time' });
   const clientMode = useWatch({ control: form.control, name: 'clientMode' });
+
+  const overrides = useQuery({
+    queryKey: ['availability-overrides', selectedDate],
+    queryFn: () =>
+      api<{ items: AvailabilityOverrideDto[] }>('/availability/overrides', {
+        search: { from: selectedDate, to: selectedDate },
+      }),
+    enabled: open,
+  });
+  const dayAppointments = useQuery({
+    queryKey: ['appointments', selectedDate],
+    queryFn: () =>
+      api<{ items: AppointmentDto[] }>('/appointments', {
+        search: { from: selectedDate, to: selectedDate },
+      }),
+    enabled: open,
+  });
 
   const selectedServices = useMemo(
     () => (services.data?.items ?? []).filter((item) => selectedServiceIds.includes(item.id)),
@@ -155,13 +170,13 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
 
   const slots = useMemo(() => {
     if (durationMinutes <= 0) return [];
-    const weekday = getWeekdayFromIsoDate(date);
+    const weekday = getWeekdayFromIsoDate(selectedDate);
     const allHours = hours.data?.items ?? [];
     const weekdayRanges = allHours
       .filter((item) => item.weekday === weekday)
       .map((item) => ({ startMinute: item.startMinute, endMinute: item.endMinute }));
     const dayOverrides = (overrides.data?.items ?? [])
-      .filter((item) => item.date === date)
+      .filter((item) => item.date === selectedDate)
       .map((item) => ({
         type: item.type,
         startMinute: item.startMinute,
@@ -181,7 +196,7 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
     if (ranges.length === 0) return [];
 
     const extraBusy = resolved.extraBusy.map((range) => {
-      const startsAt = zonedDateTimeToUtc(date, minutesToTime(range.startMinute));
+      const startsAt = zonedDateTimeToUtc(selectedDate, minutesToTime(range.startMinute));
       return {
         startsAt,
         blockedUntil: addMinutes(startsAt, range.endMinute - range.startMinute),
@@ -189,12 +204,12 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
     });
 
     return generateSlotsForRanges({
-      date,
+      date: selectedDate,
       ranges,
       durationMinutes,
       bufferAfterMinutes,
       busy: [
-        ...appointments
+        ...(dayAppointments.data?.items ?? [])
           .filter((item) => occupiesSchedule(item.status))
           .map((item) => ({
             startsAt: new Date(item.startsAt),
@@ -204,8 +219,8 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
       ],
     });
   }, [
-    appointments,
-    date,
+    dayAppointments.data?.items,
+    selectedDate,
     durationMinutes,
     bufferAfterMinutes,
     hours.data?.items,
@@ -260,6 +275,7 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       form.reset();
       setPhoneMask('');
+      onSaved?.(values.date);
       onClose();
     } catch (error) {
       if (error instanceof ApiClientError && error.code === 'SCHEDULE_CONFLICT') {
@@ -322,8 +338,6 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
           className="flex flex-col gap-4"
           onSubmit={form.handleSubmit(onSubmit)}
         >
-          <input type="hidden" {...form.register('date')} />
-
           <Field label="Cliente" required>
             {(props) => (
               <Select
@@ -445,6 +459,18 @@ export function AppointmentComposer({ open, onClose, date, appointments }: Appoi
               .
             </Alert>
           ) : null}
+
+          <div>
+            <p className="text-brown-900 mb-2 text-sm font-semibold">Dia do atendimento</p>
+            <DatePicker
+              label="Escolher o dia do atendimento"
+              value={selectedDate}
+              minDate={today}
+              onChange={(next) => {
+                form.setValue('date', next, { shouldValidate: true, shouldDirty: true });
+              }}
+            />
+          </div>
 
           <Field label="Horário" required error={form.formState.errors.time?.message}>
             {(props) => (

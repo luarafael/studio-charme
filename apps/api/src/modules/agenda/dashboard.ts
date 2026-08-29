@@ -37,7 +37,9 @@ export async function getDashboard(
     prisma.appointment.findMany({
       where: {
         professionalId,
-        startsAt: { gte: tomorrow },
+        // A partir de agora, não só de amanhã: horário confirmado para hoje à
+        // tarde também entra em Próximos.
+        startsAt: { gte: now },
         status: { in: ['PENDING', 'CONFIRMED'] },
       },
       include: { client: { select: { id: true, name: true, phone: true } }, services: true },
