@@ -6,7 +6,7 @@ import { acceptInviteSchema, type AcceptInviteInput } from '@studio-charme/contr
 import { brandAssets, siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
-import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Alert } from '@/components/ui/Alert';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { api, ApiClientError } from '@/lib/api';
@@ -87,7 +87,11 @@ export default function ResetPasswordPage() {
                 <input type="hidden" {...form.register('token')} />
                 <Field label="Nova senha" required error={form.formState.errors.password?.message}>
                   {(props) => (
-                    <Input {...props} type="password" autoComplete="new-password" {...form.register('password')} />
+                    <PasswordInput
+                      {...props}
+                      autoComplete="new-password"
+                      {...form.register('password')}
+                    />
                   )}
                 </Field>
                 <Field
@@ -96,9 +100,8 @@ export default function ResetPasswordPage() {
                   error={form.formState.errors.passwordConfirmation?.message}
                 >
                   {(props) => (
-                    <Input
+                    <PasswordInput
                       {...props}
-                      type="password"
                       autoComplete="new-password"
                       {...form.register('passwordConfirmation')}
                     />

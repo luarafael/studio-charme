@@ -44,8 +44,9 @@ describe('LoginPage', () => {
     renderLogin();
 
     expect(screen.getByRole('heading', { name: 'Entrar' })).toBeInTheDocument();
-    expect(screen.getByLabelText(/E-mail/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Senha/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^E-mail/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Senha/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mostrar senha' })).toBeInTheDocument();
 
     const html = document.body.textContent ?? '';
     expect(html).not.toMatch(/clarissemendes1607/i);

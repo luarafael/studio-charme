@@ -7,6 +7,7 @@ import { brandAssets, siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Alert } from '@/components/ui/Alert';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { ApiClientError } from '@/lib/api';
@@ -85,9 +86,8 @@ export default function LoginPage() {
             </Field>
             <Field label="Senha" required error={form.formState.errors.password?.message}>
               {(props) => (
-                <Input
+                <PasswordInput
                   {...props}
-                  type="password"
                   autoComplete="current-password"
                   {...form.register('password')}
                 />
