@@ -176,12 +176,19 @@ export default function ClientsPage() {
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2">
             {clients.data!.items.map((client) => (
-              <li key={client.id}>
-                <Card>
-                  <CardBody>
-                    <p className="text-brown-900 font-semibold">{client.name}</p>
-                    <p className="text-brown-600 mt-1 text-sm">{formatBrazilianPhone(client.phone)}</p>
-                    {client.notes && <p className="text-brown-500 mt-2 text-sm">{client.notes}</p>}
+              <li key={client.id} className="min-w-0">
+                <Card className="h-full">
+                  <CardBody className="flex h-full flex-col">
+                    <p className="text-brown-900 truncate font-semibold">{client.name}</p>
+                    <p className="text-brown-600 mt-1 truncate text-sm">
+                      {formatBrazilianPhone(client.phone)}
+                    </p>
+                    <p
+                      className="text-brown-500 mt-2 line-clamp-2 min-h-10 text-sm"
+                      title={client.notes?.trim() || undefined}
+                    >
+                      {client.notes?.trim() || 'Sem observações'}
+                    </p>
                   </CardBody>
                 </Card>
               </li>

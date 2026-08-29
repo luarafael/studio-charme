@@ -157,7 +157,7 @@ export function BookingSection() {
               </div>
             ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 flex flex-col gap-5" noValidate>
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-start">
                 <Field label="Seu nome" required error={errors.clientName?.message}>
                   {(fieldProps) => (
                     <Input
@@ -172,7 +172,7 @@ export function BookingSection() {
                 <Field
                   label="Seu WhatsApp"
                   required
-                  hint="Com DDD, para conseguirmos responder."
+                  hint="Com DDD"
                   error={errors.clientPhone?.message}
                 >
                   {(fieldProps) => (

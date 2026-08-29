@@ -50,7 +50,7 @@ export function buttonClasses(
 
 /** Classes compartilhadas pelos controles, para manter altura e foco iguais. */
 export const controlClasses = cn(
-  'w-full rounded-control border bg-white px-3.5 py-2.5 text-base text-brown-900',
+  'w-full min-w-0 rounded-control border bg-white px-3.5 py-2.5 text-base text-brown-900',
   'border-brown-200 placeholder:text-brown-400',
   'transition-[border-color,box-shadow] duration-200 ease-brand',
   'hover:border-brown-300',

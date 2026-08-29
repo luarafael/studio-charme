@@ -207,7 +207,7 @@ export function LiveBookingForm({ catalog }: LiveBookingFormProps) {
         )}
       </Field>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-start">
         <Field label="Seu nome" required error={form.formState.errors.clientName?.message}>
           {(props) => <Input {...props} autoComplete="name" {...form.register('clientName')} />}
         </Field>

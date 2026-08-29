@@ -11,7 +11,7 @@ export type FieldRenderProps = {
 
 export type FieldProps = {
   label: string;
-  /** Dica exibida antes de o campo ser preenchido. */
+  /** Dica exibida abaixo do controle, para não desalinhá-lo em grades. */
   hint?: string;
   error?: string;
   required?: boolean;
@@ -35,7 +35,7 @@ export function Field({ label, hint, error, required = false, className, childre
   const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ');
 
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
       <label htmlFor={id} className="text-brown-900 text-sm font-semibold">
         {label}
         {required && (
@@ -48,18 +48,18 @@ export function Field({ label, hint, error, required = false, className, childre
         )}
       </label>
 
-      {hint && (
-        <p id={hintId} className="text-brown-500 text-xs">
-          {hint}
-        </p>
-      )}
-
       {children({
         id,
         'aria-describedby': describedBy === '' ? undefined : describedBy,
         'aria-invalid': error ? true : undefined,
         'aria-required': required || undefined,
       })}
+
+      {hint && (
+        <p id={hintId} className="text-brown-500 text-xs">
+          {hint}
+        </p>
+      )}
 
       {error && (
         <p id={errorId} className="text-danger-700 flex items-start gap-1.5 text-sm">
