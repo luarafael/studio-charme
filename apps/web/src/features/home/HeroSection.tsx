@@ -8,7 +8,7 @@ export function HeroSection() {
   return (
     <section
       id="inicio"
-      className="bg-brown-900 pb-section md:pb-section-lg relative overflow-hidden pt-28 md:pt-36"
+      className="bg-brown-900 pb-section md:pb-section-lg relative overflow-hidden pt-[calc(7rem+env(safe-area-inset-top,0px))] md:pt-[calc(9rem+env(safe-area-inset-top,0px))]"
     >
       {/* Brilho decorativo leve, sem custo de imagem ou animação. */}
       <div

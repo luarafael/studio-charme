@@ -9,7 +9,7 @@
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
     /* Compensa o header fixo ao navegar por âncoras. */
-    scroll-padding-top: 5.5rem;
+    scroll-padding-top: calc(5.5rem + env(safe-area-inset-top, 0px));
   }
 
   body {
@@ -63,6 +63,24 @@
   /* Evita que o conteúdo salte quando um modal bloqueia a rolagem. */
   body[data-scroll-locked='true'] {
     overflow: hidden;
+  }
+
+  /* No iPhone o seletor nativo de horário é largo demais e vaza da caixa. */
+  input[type='time'] {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  input[type='time']::-webkit-date-and-time-value {
+    text-align: left;
+    min-width: 0;
+  }
+
+  input[type='time']::-webkit-calendar-picker-indicator {
+    margin-inline-start: 0;
+    width: 1rem;
+    height: 1rem;
+    padding: 0;
   }
 }
 

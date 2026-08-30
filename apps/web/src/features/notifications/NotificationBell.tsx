@@ -57,7 +57,7 @@ export function NotificationBell() {
   useEffect(() => {
     if (!open) return;
 
-    function onPointerDown(event: MouseEvent) {
+    function onPointerDown(event: Event) {
       if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
         setOpen(false);
       }
@@ -68,9 +68,11 @@ export function NotificationBell() {
     }
 
     document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [open]);
@@ -144,7 +146,7 @@ export function NotificationBell() {
           id="painel-alertas"
           role="region"
           aria-label="Alertas"
-          className="border-brown-100 shadow-overlay absolute top-full right-0 z-30 mt-2 w-[min(calc(100vw-2rem),22rem)] overflow-hidden rounded-panel border bg-white"
+          className="border-brown-100 shadow-overlay z-30 mt-2 overflow-hidden rounded-panel border bg-white max-lg:fixed max-lg:inset-x-4 max-lg:top-[calc(env(safe-area-inset-top,0px)+4.25rem)] max-lg:mt-0 max-lg:w-auto max-lg:max-h-[min(32rem,calc(100dvh-6rem))] max-lg:overflow-y-auto lg:absolute lg:top-full lg:right-0 lg:w-[min(calc(100vw-2rem),22rem)]"
         >
           <div className="border-brown-100 flex items-center justify-between gap-2 border-b px-4 py-3">
             <p className="text-brown-900 text-sm font-semibold">Alertas</p>

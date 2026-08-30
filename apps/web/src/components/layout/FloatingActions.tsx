@@ -26,7 +26,7 @@ export function FloatingActions() {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30">
-      <div className="max-w-content mx-auto flex items-end justify-between px-4 pb-4 sm:px-8">
+      <div className="max-w-content mx-auto flex items-end justify-between px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:px-8">
         <a
           href={buildWhatsAppUrl(siteConfig.primaryWhatsApp, siteBookingMessage())}
           target="_blank"

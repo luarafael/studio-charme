@@ -21,7 +21,11 @@ export function Section({ id, tone = 'light', className, children }: SectionProp
     <section
       id={id}
       // scroll-mt compensa o header fixo quando a seção é alvo de uma âncora.
-      className={cn('py-section md:py-section-lg scroll-mt-24', toneClasses[tone], className)}
+      className={cn(
+        'py-section md:py-section-lg scroll-mt-[calc(6rem+env(safe-area-inset-top,0px))]',
+        toneClasses[tone],
+        className,
+      )}
     >
       <Container>{children}</Container>
     </section>

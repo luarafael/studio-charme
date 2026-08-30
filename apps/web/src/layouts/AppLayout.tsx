@@ -62,7 +62,7 @@ export function AppLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        <header className="border-brown-100 flex items-center justify-between gap-4 border-b bg-white px-4 py-3 lg:px-8">
+        <header className="border-brown-100 flex items-center justify-between gap-4 border-b bg-white px-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] pb-3 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             {professional && (
               <div className="lg:hidden">
@@ -98,7 +98,7 @@ export function AppLayout() {
 
         <nav
           aria-label="Área interna"
-          className="border-brown-100 bg-white lg:hidden sticky bottom-0 z-20 flex border-t"
+          className="border-brown-100 bg-white lg:hidden sticky bottom-0 z-20 flex border-t pb-[env(safe-area-inset-bottom,0px)]"
         >
           {nav.map((item) => (
             <NavLink

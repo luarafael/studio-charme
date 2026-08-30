@@ -53,7 +53,7 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        'ease-brand fixed inset-x-0 top-0 z-40 transition-[background-color,box-shadow,backdrop-filter] duration-200',
+        'ease-brand fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] transition-[background-color,box-shadow,backdrop-filter] duration-200',
         solid ? 'bg-brown-900/95 shadow-card backdrop-blur-sm' : 'bg-transparent',
       )}
     >

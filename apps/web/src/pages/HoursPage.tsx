@@ -134,7 +134,7 @@ export default function HoursPage() {
             {days.map((day, weekday) => (
               <li
                 key={WEEKDAY_LABELS[weekday]}
-                className="rounded-card border-brown-100 flex flex-col gap-3 border bg-white px-4 py-3 sm:flex-row sm:items-center"
+                className="rounded-card border-brown-100 flex flex-col gap-3 overflow-hidden border bg-white px-3 py-3 sm:flex-row sm:items-center sm:px-4"
               >
                 <label className="text-brown-900 flex min-w-40 items-center gap-2 text-sm font-medium">
                   <input
@@ -149,13 +149,13 @@ export default function HoursPage() {
                   />
                   {WEEKDAY_LABELS[weekday]}
                 </label>
-                <div className="grid w-full min-w-0 grid-cols-1 gap-4 min-[400px]:grid-cols-2">
+                <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Início" className="min-w-0">
                     {(props) => (
                       <Input
                         {...props}
                         type="time"
-                        className="w-full min-w-0"
+                        className="h-10 w-full max-w-full min-w-0 px-2 py-1.5 text-sm"
                         disabled={!day.enabled}
                         value={day.start}
                         onChange={(event) => {
@@ -171,7 +171,7 @@ export default function HoursPage() {
                       <Input
                         {...props}
                         type="time"
-                        className="w-full min-w-0"
+                        className="h-10 w-full max-w-full min-w-0 px-2 py-1.5 text-sm"
                         disabled={!day.enabled}
                         value={day.end}
                         onChange={(event) => {

@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
   });
 
   return (
-    <div className="bg-brown-900 flex min-h-svh flex-col items-center justify-center px-4 py-12">
+    <div className="bg-brown-900 flex min-h-svh flex-col items-center justify-center px-4 py-12 pt-[calc(3rem+env(safe-area-inset-top,0px))] pb-[calc(3rem+env(safe-area-inset-bottom,0px))]">
       <div className="w-full max-w-md">
         <Link to="/entrar" className="mb-8 flex flex-col items-center gap-3 text-center">
           <img src={brandAssets.logoMark} alt="" width={56} height={56} className="size-14" />
