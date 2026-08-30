@@ -161,9 +161,9 @@ export function NotificationBell() {
 
           <div className="border-brown-100 border-b px-4 py-3">
             {iosNeedsInstall ? (
-              <p className="text-brown-600 text-xs">
-                No iPhone, toque em Compartilhar e em Adicionar à Tela de Início para receber
-                avisos com o app fechado.
+              <p className="text-brown-600 text-xs leading-relaxed">
+                No iPhone o aviso só chega depois de instalar o app: toque em Compartilhar, em
+                Adicionar à Tela de Início, abra o ícone e volte aqui para ativar os alertas.
               </p>
             ) : pushReady ? (
               <p className="text-brown-600 flex items-center gap-2 text-xs">

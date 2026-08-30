@@ -5,6 +5,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { ProfessionalAreaName } from '@/features/profile/ProfessionalAreaName';
 import { ProfessionalPhoto } from '@/features/profile/ProfessionalPhoto';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
+import { IosInstallHint } from '@/features/pwa/IosInstallHint';
 import { cn } from '@/lib/cn';
 
 const nav = [
@@ -91,6 +92,7 @@ export function AppLayout() {
         </header>
 
         <main id="conteudo-app" className="flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">
+          <IosInstallHint className="mb-4" />
           <Outlet />
         </main>
 

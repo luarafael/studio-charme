@@ -1,6 +1,14 @@
 /* Service worker só para push. Não intercepta navegação: evita cache antigo
    do Vite e não compete com o carregamento normal do site. */
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', (event) => {
   let data = {
     title: 'Studio Charme',

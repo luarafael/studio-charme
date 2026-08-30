@@ -12,6 +12,7 @@ import { Alert } from '@/components/ui/Alert';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { ApiClientError } from '@/lib/api';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { IosInstallHint } from '@/features/pwa/IosInstallHint';
 
 type LoginFormValues = {
   email: string;
@@ -46,6 +47,7 @@ export default function LoginPage() {
         </a>
 
         <div className="rounded-panel bg-cream px-6 py-8 shadow-overlay sm:px-8">
+          <IosInstallHint className="mb-6" />
           <h1 className="text-display-sm text-brown-900">Entrar</h1>
           <p className="text-brown-600 mt-2 text-sm">
             Área exclusiva das profissionais. Cada conta vê somente os próprios dados.

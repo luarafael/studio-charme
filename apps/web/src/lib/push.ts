@@ -52,7 +52,12 @@ export async function enablePushAlerts(): Promise<void> {
     throw new Error('Os avisos no celular ainda não estão disponíveis neste ambiente.');
   }
 
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.register('/sw.js', {
+    scope: '/',
+    updateViaCache: 'none',
+  });
+  await registration.update().catch(() => undefined);
+  await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(vapid.publicKey) as BufferSource,

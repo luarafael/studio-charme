@@ -149,12 +149,13 @@ export default function HoursPage() {
                   />
                   {WEEKDAY_LABELS[weekday]}
                 </label>
-                <div className="flex flex-1 gap-3">
-                  <Field label="Início">
+                <div className="grid w-full min-w-0 grid-cols-1 gap-4 min-[400px]:grid-cols-2">
+                  <Field label="Início" className="min-w-0">
                     {(props) => (
                       <Input
                         {...props}
                         type="time"
+                        className="w-full min-w-0"
                         disabled={!day.enabled}
                         value={day.start}
                         onChange={(event) => {
@@ -165,11 +166,12 @@ export default function HoursPage() {
                       />
                     )}
                   </Field>
-                  <Field label="Fim">
+                  <Field label="Fim" className="min-w-0">
                     {(props) => (
                       <Input
                         {...props}
                         type="time"
+                        className="w-full min-w-0"
                         disabled={!day.enabled}
                         value={day.end}
                         onChange={(event) => {
