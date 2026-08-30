@@ -13,6 +13,7 @@ import { siteConfig } from '@/config/site';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
@@ -155,7 +156,7 @@ export default function HoursPage() {
                       <Input
                         {...props}
                         type="time"
-                        className="h-10 w-full max-w-full min-w-0 px-2 py-1.5 text-sm"
+                        className="h-10 w-full max-w-full min-w-0 appearance-none px-3 py-2 text-sm"
                         disabled={!day.enabled}
                         value={day.start}
                         onChange={(event) => {
@@ -171,7 +172,7 @@ export default function HoursPage() {
                       <Input
                         {...props}
                         type="time"
-                        className="h-10 w-full max-w-full min-w-0 px-2 py-1.5 text-sm"
+                        className="h-10 w-full max-w-full min-w-0 appearance-none px-3 py-2 text-sm"
                         disabled={!day.enabled}
                         value={day.end}
                         onChange={(event) => {
@@ -195,7 +196,7 @@ export default function HoursPage() {
       <section className="flex flex-col gap-4">
         <h2 className="text-brown-900 text-lg font-semibold">Folga ou bloqueio</h2>
         <form
-          className="rounded-card border-brown-100 flex flex-col gap-3 border bg-white p-4 sm:flex-row sm:items-end"
+          className="rounded-card border-brown-100 flex min-w-0 flex-col gap-3 overflow-hidden border bg-white p-4 sm:flex-row sm:items-end"
           onSubmit={(event) => {
             event.preventDefault();
             void createOff.mutateAsync().catch((error: unknown) => {
@@ -207,16 +208,15 @@ export default function HoursPage() {
             });
           }}
         >
-          <Field label="Data" className="sm:w-40">
-            {(props) => (
-              <Input
-                {...props}
-                type="date"
-                value={offDate}
-                onChange={(event) => setOffDate(event.target.value as IsoDate)}
-              />
-            )}
-          </Field>
+          <div className="min-w-0">
+            <p className="text-brown-900 mb-1.5 text-sm font-semibold">Data</p>
+            <DatePicker
+              label="Data da folga ou bloqueio"
+              value={offDate}
+              onChange={setOffDate}
+              className="border-0 p-0"
+            />
+          </div>
           <Field label="Motivo (opcional)" className="flex-1">
             {(props) => (
               <Input {...props} value={offReason} onChange={(event) => setOffReason(event.target.value)} />

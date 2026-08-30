@@ -65,22 +65,40 @@
     overflow: hidden;
   }
 
-  /* No iPhone o seletor nativo de horário é largo demais e vaza da caixa. */
-  input[type='time'] {
+  /* No iPhone o seletor nativo de data/hora ignora a largura e vaza à direita. */
+  input[type='time'],
+  input[type='date'] {
+    display: block;
+    width: 100%;
     max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
   }
 
-  input[type='time']::-webkit-date-and-time-value {
+  input[type='time']::-webkit-date-and-time-value,
+  input[type='date']::-webkit-date-and-time-value {
     text-align: left;
     min-width: 0;
   }
 
-  input[type='time']::-webkit-calendar-picker-indicator {
-    margin-inline-start: 0;
+  input[type='time']::-webkit-datetime-edit,
+  input[type='date']::-webkit-datetime-edit,
+  input[type='time']::-webkit-datetime-edit-fields-wrapper,
+  input[type='date']::-webkit-datetime-edit-fields-wrapper {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='date']::-webkit-calendar-picker-indicator {
+    margin-inline: 0 0;
     width: 1rem;
     height: 1rem;
     padding: 0;
+    flex-shrink: 0;
   }
 }
 
