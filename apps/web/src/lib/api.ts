@@ -1,7 +1,31 @@
 import { API_ERROR_MESSAGES, type ApiErrorCode } from '@studio-charme/contracts';
 
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
+
+/**
+ * No site publicado o navegador fala com o próprio host. A Vercel encaminha
+ * `/api` para o Railway, e o cookie de sessão fica first-party — o Safari do
+ * iPhone (e o WebView do WhatsApp) bloqueia cookie de outro domínio.
+ */
+export function shouldUseSameOriginApi(currentOrigin: string | undefined): boolean {
+  if (!currentOrigin) return false;
+  try {
+    const parsed = new URL(currentOrigin);
+    return parsed.protocol === 'https:' && !isLoopbackHost(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Aceita host sem protocolo (erro comum na Vercel) e remove `/api/v1` no final. */
-export function resolveApiUrl(raw: string | undefined): string {
+export function resolveApiUrl(raw: string | undefined, currentOrigin?: string): string {
+  const pageOrigin = currentOrigin ?? (typeof window !== 'undefined' ? window.location.origin : undefined);
+  if (shouldUseSameOriginApi(pageOrigin) && pageOrigin) {
+    return new URL(pageOrigin).origin;
+  }
+
   const fallback = 'http://localhost:3333';
   let value = raw?.trim() || fallback;
 
